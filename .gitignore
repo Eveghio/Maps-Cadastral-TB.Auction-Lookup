@@ -1,0 +1,5 @@
+dist/
+tests/out/
+tests/fixtures/
+node_modules/
+__pycache__/

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+  <meta charset="utf-8">
+  <title>შედეგი</title>
+  <style>
+    body { margin: 0; padding: 14px 16px; font-family: sans-serif; font-size: 14px; color: #222; background: #fff; }
+    h1 { font-size: 15px; margin: 0 0 4px; }
+    .sum { color: #555; font-size: 12.5px; margin-bottom: 10px; }
+    .copied { color: #15803d; font-size: 12.5px; margin-bottom: 8px; }
+    .err { color: #b91c1c; font-size: 13px; margin: 6px 0 10px; }
+    .list { max-height: 460px; overflow: auto; }
+    .item { border: 1px solid #d6e0ec; border-radius: 7px; padding: 7px 9px; margin-bottom: 7px; }
+    .cad { font-family: monospace; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .cad small { font-family: sans-serif; font-weight: 400; font-size: 11px; color: #777; }
+    .addr { font-size: 12px; color: #555; margin: 2px 0 6px; }
+    .acts { display: flex; flex-wrap: wrap; gap: 5px; }
+    .acts button { padding: 4px 8px; font-size: 12px; cursor: pointer; border-radius: 5px; border: none; color: #fff; }
+    .b-maps { background: #2e7d32; } .b-ms { background: #1d6fb8; } .b-reg { background: #8d5a00; } .b-copy { background: #555; }
+    .acts button:hover { filter: brightness(0.88); }
+    .bottom { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+    .bottom button { padding: 6px 13px; font-size: 13px; cursor: pointer; border-radius: 6px; border: 1px solid #1d6fb8; }
+    #close { background: #1d6fb8; color: #fff; } #history, #all { background: #fff; color: #1d6fb8; }
+  </style>
+</head>
+<body>
+  <h1 id="title"></h1>
+  <div class="sum" id="sum"></div>
+  <div class="copied" id="copied" hidden></div>
+  <div class="err" id="err" hidden></div>
+  <div class="list" id="list"></div>
+  <div class="bottom">
+    <button id="all" hidden>ყველა KML-ად</button>
+    <button id="history">ისტორია</button>
+    <button id="close">დახურვა (Esc)</button>
+  </div>
+  <script src="shared-ui.js"></script>
+  <script src="result.js"></script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+  <meta charset="utf-8">
+  <title>ძებნის ისტორია</title>
+  <style>
+    body { margin: 0; padding: 20px 24px; font-family: sans-serif; font-size: 14px; color: #222; background: #fafafa; }
+    h1 { font-size: 18px; margin: 0 0 14px; }
+    .filters { display: grid; grid-template-columns: max-content 1fr; gap: 8px 12px; align-items: start; margin-bottom: 12px; }
+    .filters .lbl { color: #555; font-size: 13px; padding-top: 5px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .group { display: flex; gap: 4px; align-items: center; padding: 2px 6px 2px 8px; border-left: 3px solid var(--c); }
+    .group .gname { font-size: 12px; font-weight: 600; color: var(--c); margin-right: 2px; }
+    .chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border: 1px solid #ccc; border-radius: 14px;
+            background: #fff; cursor: pointer; font-size: 13px; user-select: none; }
+    .chip input { margin: 0; }
+    .chip.on { border-color: var(--c, #555); background: color-mix(in srgb, var(--c, #555) 10%, #fff); }
+    .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+    #text { padding: 5px 8px; font-size: 14px; width: 220px; }
+    button { padding: 5px 11px; font-size: 13px; cursor: pointer; border-radius: 6px; border: 1px solid #888; background: #fff; }
+    #clear, #delSel, #delShown { border-color: #b91c1c; color: #b91c1c; }
+    button:disabled { opacity: .45; cursor: default; }
+    th.sel, td.sel { width: 22px; padding-right: 0; cursor: default; }
+    td.sel input, th.sel input { margin: 0; cursor: pointer; }
+    tr.picked td { background: #fff7e0; }
+    td.res { font-size: 12px; word-break: break-all; min-width: 220px; }
+    td.res a, td.code a { color: #1d6fb8; text-decoration: none; }
+    td.res a:hover, td.code a:hover { text-decoration: underline; }
+    td.res .file { color: #444; }
+    td.res .appitem { margin-bottom: 4px; word-break: break-all; }
+    td.res .appitem b { color: #333; }
+    td.code .from { font-family: sans-serif; font-size: 12px; margin-top: 3px; word-break: break-all; }
+    td.code .from b, td.res b { font-family: sans-serif; font-weight: 600; color: #666; }
+    #count { color: #666; margin-left: auto; }
+    table { border-collapse: collapse; width: 100%; background: #fff; }
+    th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #e5e5e5; vertical-align: top; }
+    th { background: #f0f0f0; font-weight: 600; position: sticky; top: 0; cursor: pointer; user-select: none; white-space: nowrap; }
+    th .arrow { color: #888; font-size: 11px; }
+    td.code { font-family: monospace; font-size: 14px; }
+    td.time { white-space: nowrap; color: #555; }
+    .act { font-weight: 600; }
+    .found { color: #15803d; } .missing { color: #b45309; } .error { color: #b91c1c; } .opened { color: #555; }
+    .errtext { font-size: 12px; color: #b91c1c; font-weight: normal; }
+    #empty { color: #777; padding: 20px 0; }
+    td.code .route { font-family: sans-serif; font-weight: 600; }
+    td.code .place { font-family: sans-serif; font-size: 12px; color: #666; margin-top: 2px; }
+    .imp { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 8px; font-size: 11px; background: #ede7f6; color: #5e35b1; }
+    #export, #import { border-color: #1d6fb8; color: #1d6fb8; }
+    #note { font-size: 13px; color: #15803d; min-height: 17px; margin: -4px 0 10px; }
+    #note.err { color: #b91c1c; }
+    #overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); display: flex; align-items: center; justify-content: center; z-index: 10; }
+    #overlay[hidden] { display: none; }
+    .dialog { background: #fff; border-radius: 10px; padding: 18px 20px; width: 460px; max-width: calc(100vw - 32px); box-shadow: 0 8px 30px rgba(0,0,0,.25); }
+    .dialog h2 { font-size: 16px; margin: 0 0 6px; word-break: break-all; }
+    .dialog p { margin: 0 0 10px; color: #555; font-size: 13px; }
+    .dialog fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 0 0 10px; padding: 8px 12px; }
+    .dialog legend { font-size: 13px; font-weight: 600; padding: 0 4px; }
+    .dialog label { display: block; margin: 4px 0; font-size: 13.5px; cursor: pointer; }
+    .dlgButtons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+    #dlgOk { background: #1d6fb8; border-color: #1d6fb8; color: #fff; }
+  </style>
+</head>
+<body>
+  <h1>ძებნის ისტორია</h1>
+  <div class="filters">
+    <span class="lbl">მოქმედება:</span><div class="chips" id="actionChips"></div>
+    <span class="lbl">შედეგი:</span><div class="chips" id="statusChips"></div>
+    <span class="lbl">წყარო:</span><div class="chips" id="sourceChips"></div>
+  </div>
+  <div class="bar">
+    <input id="text" type="search" placeholder="კოდი, ნომერი, მარშრუტი ან ლინკი">
+    <button id="reset">ფილტრების გასუფთავება</button>
+    <button id="export" title="ისტორია JSON ფაილად">ექსპორტი</button>
+    <button id="import" title="სხვისი ან შენახული ისტორიის ფაილი">იმპორტი</button>
+    <input id="importFile" type="file" accept=".json,application/json" hidden>
+    <button id="delSel" disabled title="მონიშნე ჩანაწერები მარცხენა უჯრებით">მონიშნულის წაშლა</button>
+    <button id="delShown" hidden title="წაიშლება მხოლოდ ის, რაც ფილტრით ჩანს">ნაჩვენების წაშლა</button>
+    <button id="clear">ისტორიის წაშლა</button>
+    <span id="count"></span>
+  </div>
+  <div id="note"></div>
+  <table>
+    <thead><tr>
+      <th class="sel"><input type="checkbox" id="selAll" title="ყველა ნაჩვენების მონიშვნა"></th>
+      <th data-sort="t">დრო <span class="arrow"></span></th>
+      <th data-sort="action">მოქმედება <span class="arrow"></span></th>
+      <th data-sort="code">მოძებნილი <span class="arrow"></span></th>
+      <th data-sort="res">შედეგი <span class="arrow"></span></th>
+      <th data-sort="status">სტატუსი <span class="arrow"></span></th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div id="empty" hidden>ჩანაწერი არ არის</div>
+  <div id="overlay" hidden>
+    <div class="dialog" role="dialog" aria-modal="true">
+      <h2 id="dlgTitle"></h2>
+      <div id="dlgBody"></div>
+      <div class="dlgButtons"><button id="dlgCancel">გაუქმება (Esc)</button><button id="dlgOk"></button></div>
+    </div>
+  </div>
+  <script src="shared-ui.js"></script>
+  <script src="history.js"></script>
+</body>
+</html>

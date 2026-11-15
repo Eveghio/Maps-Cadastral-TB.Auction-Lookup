@@ -1,0 +1,148 @@
+{
+  "manifest_version": 3,
+  "name": "NAPR Lookup DEMO",
+  "version": "3.14",
+  "description": "Cadastral codes on maps.gov.ge and ms.gov.ge maps (several at once, KML files), ms.gov.ge applications (AR… and other agencies) with KML, NAPR extracts and cadastral plans (latest or N-th, by preparation time) / document page, Tbilisi auction lots - via selection, clipboard, shortcut or popup, with history; open the place you are looking at on maps.gov.ge / ms.gov.ge / Google Maps.",
+  "permissions": [
+    "contextMenus",
+    "tabs",
+    "scripting",
+    "offscreen",
+    "clipboardRead",
+    "clipboardWrite",
+    "activeTab",
+    "downloads",
+    "storage",
+    "alarms",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "maps.gov.ge / ms.gov.ge / რეესტრი / აუქციონი",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://ms.gov.ge/msmap/*"
+      ],
+      "js": [
+        "ms_hook.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://maps.gov.ge/map/portal*"
+      ],
+      "js": [
+        "content_maps.js",
+        "content_jump_maps.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://ms.gov.ge/msmap/*"
+      ],
+      "js": [
+        "content_ms.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.google.com/maps*",
+        "https://www.google.ge/maps*",
+        "https://maps.google.com/*"
+      ],
+      "js": [
+        "content_google.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "1010-maps-map": {
+      "description": "1.1 maps.gov.ge · რუკა: დამატება ღია რუკაზე",
+      "suggested_key": {
+        "default": "Alt+M"
+      }
+    },
+    "1020-maps-map-new-tab": {
+      "description": "1.2 maps.gov.ge · რუკა: ახალ ტაბში"
+    },
+    "1030-maps-kml": {
+      "description": "1.3 maps.gov.ge · KML ფაილ(ებ)ი"
+    },
+    "1040-maps-person-map": {
+      "description": "1.4 maps.gov.ge · პირადი ნომრით ქონება რუკაზე"
+    },
+    "1050-maps-person-kml": {
+      "description": "1.5 maps.gov.ge · პირადი ნომრით KML"
+    },
+    "2010-ms-map": {
+      "description": "2.1 ms.gov.ge · რუკა: დამატება ღია რუკაზე"
+    },
+    "2020-ms-map-new-tab": {
+      "description": "2.2 ms.gov.ge · რუკა: ახალ ტაბში"
+    },
+    "2030-ms-kml": {
+      "description": "2.3 ms.gov.ge · KML ფაილ(ებ)ი"
+    },
+    "2040-ms-application-map": {
+      "description": "2.4 ms.gov.ge · განცხადება რუკაზე"
+    },
+    "2050-ms-application-kml": {
+      "description": "2.5 ms.gov.ge · განცხადების KML"
+    },
+    "3010-registry-extract": {
+      "description": "3.1 რეესტრი · ამონაწერი (ბოლო; ხელახლა = წინა)",
+      "suggested_key": {
+        "default": "Alt+Z"
+      }
+    },
+    "3020-registry-plan": {
+      "description": "3.2 რეესტრი · საკადასტრო გეგმა (ბოლო; ხელახლა = წინა)"
+    },
+    "3030-registry-all-documents": {
+      "description": "3.3 რეესტრი · ყველა დოკუმენტის გვერდი (cad_amo)",
+      "suggested_key": {
+        "default": "Alt+X"
+      }
+    },
+    "4010-contours-map": {
+      "description": "4.1 კონტურები · სიაში დამატება და რუკაზე ჩვენება (geojson.io)"
+    },
+    "4020-contours-kml": {
+      "description": "4.2 კონტურები · KML (რუკიდან; თუ არ არის, გეგმიდან)"
+    },
+    "5010-place-to-maps": {
+      "description": "5.1 ეს ადგილი → maps.gov.ge"
+    },
+    "5020-place-to-ms": {
+      "description": "5.2 ეს ადგილი → ms.gov.ge"
+    },
+    "5030-place-to-google": {
+      "description": "5.3 ეს ადგილი → Google Maps"
+    },
+    "5040-place-to-geojson": {
+      "description": "5.4 ეს ადგილი → geojson.io"
+    },
+    "5050-place-cadastral-code": {
+      "description": "5.5 ეს ადგილი → საკადასტრო კოდი"
+    },
+    "6010-auction-lot": {
+      "description": "6.1 აუქციონი · ლოტის გახსნა",
+      "suggested_key": {
+        "default": "Alt+A"
+      }
+    }
+  }
+}

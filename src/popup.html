@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { margin: 0; padding: 12px; width: 330px; font-family: sans-serif; font-size: 13px; color: #222; }
+    input { width: 100%; box-sizing: border-box; height: 30px; font-size: 15px; padding: 2px 8px; margin-bottom: 8px; }
+    .row { display: flex; align-items: center; gap: 4px; margin-top: 6px; padding-left: 6px; border-left: 4px solid var(--c); }
+    .row .site { width: 74px; font-size: 11px; font-weight: 600; color: var(--c); }
+    .row button { flex: 1; padding: 6px 4px; font-size: 12.5px; cursor: pointer; color: #fff; background: var(--c);
+                  border: none; border-radius: 6px; white-space: nowrap; }
+    .row button:hover { filter: brightness(0.88); }
+    .maps { --c: #2e7d32; }
+    .ms { --c: #1d6fb8; }
+    .other { --c: #8d5a00; }
+    .contours { --c: #e65100; }
+    .jump { --c: #444; }
+    .jump button { min-width: 0; padding-left: 2px; padding-right: 2px; }
+    .jump button.t-maps { background: #2e7d32; } .jump button.t-ms { background: #1d6fb8; } .jump button.t-google { background: #c5221f; } .jump button.t-geojson { background: #e65100; } .jump button.t-code { background: #6a1b9a; }
+    .row button:disabled { opacity: 0.35; cursor: default; filter: none; }
+    #jumpInfo { font-size: 11px; color: #666; margin: 3px 0 0 10px; min-height: 13px; }
+    #jumpInfo.err { color: #b45309; }
+    #msg { color: #c62828; font-size: 12px; min-height: 15px; margin-top: 8px; }
+    .hint { color: #777; font-size: 11px; margin-top: 4px; display: flex; justify-content: space-between; }
+    a { color: #1d6fb8; }
+  </style>
+</head>
+<body>
+  <input id="code" type="text" placeholder="კოდი, განცხადების/ლოტის ან პირადი ნომერი" autofocus autocomplete="off">
+
+  <div class="row maps">
+    <span class="site">maps.gov.ge</span>
+    <button data-action="maps-map" title="ღია maps.gov.ge რუკას დაემატება (Shift+კლიკი = ახალ ტაბში)">რუკაზე</button>
+    <button data-action="maps-map" data-new="1">ახალ ტაბში</button>
+    <button data-action="maps-kml" title="თითო კოდზე ცალკე .kml ფაილი">KML</button>
+  </div>
+  <div class="row maps">
+    <span class="site">maps · პირადი №</span>
+    <button data-action="maps-person" title="11-ნიშნა პირადი ნომრით მესაკუთრის ნაკვეთები maps.gov.ge რუკაზე (Shift+კლიკი = ახალ ტაბში)">რუკაზე</button>
+    <button data-action="maps-person" data-new="1">ახალ ტაბში</button>
+    <button data-action="maps-person-kml" title="ყველა ნაკვეთი ერთ .kml ფაილში">KML</button>
+  </div>
+  <div class="row ms">
+    <span class="site">ms.gov.ge</span>
+    <button data-action="ms-map" title="ღია ms.gov.ge რუკას დაემატება (Shift+კლიკი = ახალ ტაბში)">რუკაზე</button>
+    <button data-action="ms-map" data-new="1">ახალ ტაბში</button>
+    <button data-action="ms-kml" title="თითო კოდზე ცალკე .kml ფაილი">KML</button>
+  </div>
+  <div class="row ms">
+    <span class="site">ms · განცხადება</span>
+    <button data-action="ms-app" title="AR… ან სხვა უწყების ნომერი (მაგ. 01262924313-67): რუკაზე, ღილაკებით თითო კონტურზე (Shift+კლიკი = ახალ ტაბში)">რუკაზე</button>
+    <button data-action="ms-app" data-new="1">ახალ ტაბში</button>
+    <button data-action="ms-app-kml" title="თითო განცხადებაზე ერთი .kml (ყველა კონტური, კოდით და თემით)">KML</button>
+  </div>
+  <div class="row other">
+    <span class="site">რეესტრი</span>
+    <button data-action="pdf" title="ქრონოლოგიურად ბოლო ამონაწერი (მომზადების დროით); გვერდზე 1–9 / ↓ = წინა">ამონაწერი</button>
+    <button data-action="plan" title="ბოლო საკადასტრო გეგმა (ნახაზები გამოტოვებულია); გვერდზე 1–9 / ↓ = წინა">გეგმა</button>
+    <button data-action="abstract" title="რეესტრის გვერდი ყველა დოკუმენტით (cad_amo)">ყველა</button>
+  </div>
+  <div class="row contours">
+    <span class="site">კონტურები</span>
+    <button data-action="contours-map" title="კოდები ემატება კონტურების სიას და მთელი სია იხსნება geojson.io-ს რუკაზე. რომელი კოდიც რუკებზე აღარ არის, იმის კონტური ბოლო საკადასტრო გეგმიდან გამოითვლება">რუკაზე</button>
+    <button data-action="contours-kml" title="თითო კოდზე .kml: რუკიდან, ხოლო თუ რუკებზე არ არის, ბოლო საკადასტრო გეგმიდან">KML</button>
+    <button id="contoursList" title="კონტურების სია: წყაროს შეცვლა (რუკა / რომელი გეგმა), ამოღება, გასუფთავება">სია</button>
+  </div>
+  <div class="row other">
+    <span class="site">აუქციონი</span>
+    <button data-action="auction" title="თბილისის აუქციონის ლოტი">ლოტი</button>
+  </div>
+
+  <div class="row jump">
+    <span class="site">ეს ადგილი →</span>
+    <button class="t-maps" data-jump="maps" disabled title="maps.gov.ge">maps</button>
+    <button class="t-ms" data-jump="ms" disabled title="ms.gov.ge">ms</button>
+    <button class="t-google" data-jump="google" disabled>Google</button>
+    <button class="t-geojson" data-jump="geojson" disabled title="geojson.io იმავე ადგილას (კონტურების გარეშე; კონტურებისთვის: კონტურები → რუკაზე)">geojson</button>
+    <button class="t-code" id="pointCode" disabled title="რა საკადასტრო კოდია: ამ რუკის ადგილას (ბოლო დაკლიკებული / მარჯვენა კლიკის წერტილი ან ცენტრი) ან ველში ჩაწერილ კოორდინატებზე; კოდი დაკოპირდება">კოდი</button>
+  </div>
+  <div id="jumpInfo"></div>
+
+  <div id="msg"></div>
+  <div class="hint">
+    <span>Enter = რუკა (კოდი/პირადი № → maps, განცხადება → ms)</span>
+    <a href="#" id="historyLink">ისტორია</a>
+  </div>
+  <script src="shared-ui.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

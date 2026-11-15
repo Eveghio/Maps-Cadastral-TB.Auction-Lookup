@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+  <meta charset="utf-8">
+  <title>კონტურები</title>
+  <style>
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; padding: 18px 22px; font-family: sans-serif; font-size: 14px; color: #222; background: #f6f3ee; }
+    h1 { font-size: 17px; margin: 0 0 4px; }
+    #summary { color: #6b6257; font-size: 13px; margin-bottom: 14px; min-height: 18px; }
+    table { border-collapse: collapse; width: 100%; max-width: 1100px; background: #fff; border: 1px solid #e3d6c3; border-radius: 8px; overflow: hidden; }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #efe7da; vertical-align: top; }
+    th { font-size: 12px; color: #6b6257; background: #fbf8f3; font-weight: 700; }
+    tr:last-child td { border-bottom: none; }
+    td.code { font-family: monospace; font-size: 15px; font-weight: 700; white-space: nowrap; }
+    td.source { white-space: nowrap; }
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 5px; margin-right: 6px; }
+    .from-map .dot { background: #1d6fb8; }
+    .from-plan .dot { background: #e65100; }
+    .working { color: #6b6257; }
+    .missing, .failed { color: #b91c1c; }
+    .details { font-size: 12.5px; color: #555; line-height: 1.45; }
+    .details .warning { color: #9a3412; }
+    .actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    .actions button { padding: 7px 14px; font-size: 13px; border-radius: 6px; cursor: pointer; border: 1px solid #8d5a00; background: #fff; color: #8d5a00; }
+    .actions button.main { background: #8d5a00; color: #fff; }
+    .actions button:disabled { opacity: 0.45; cursor: default; }
+    #message { margin-top: 10px; font-size: 13px; color: #15803d; min-height: 18px; }
+    #message.problem { color: #b91c1c; }
+    .add { display: flex; gap: 8px; margin: 10px 0 12px; max-width: 1100px; }
+    .add input { flex: 1; padding: 7px 10px; font-size: 14px; border: 1px solid #d6c7ae; border-radius: 6px; }
+    .add button { padding: 7px 14px; border-radius: 6px; border: 1px solid #8d5a00; background: #fff; color: #8d5a00; cursor: pointer; }
+    td.controls { white-space: nowrap; }
+    td.controls select { padding: 4px 6px; font-size: 12.5px; border: 1px solid #d6c7ae; border-radius: 5px; max-width: 250px; }
+    button.small { margin-left: 4px; padding: 3px 8px; border: 1px solid #d6c7ae; background: #fff; border-radius: 5px; cursor: pointer; color: #555; }
+    button.small:hover { background: #faf6ef; }
+    .actions button.quiet { border-color: #bbb; color: #666; margin-left: auto; }
+    .actions { max-width: 1100px; }
+    #emptyList { padding: 14px 4px; color: #6b6257; font-size: 13px; }
+    .legend { margin-top: 16px; font-size: 12px; color: #6b6257; line-height: 1.6; max-width: 1100px; }
+  </style>
+</head>
+<body>
+  <h1>კონტურების სია</h1>
+  <div class="add">
+    <input id="codesInput" type="text" placeholder="კოდის დამატება (ერთი ან რამდენიმე საკადასტრო კოდი)" autocomplete="off">
+    <button id="addCodes">დამატება</button>
+  </div>
+  <div id="summary"></div>
+  <table>
+    <thead><tr><th>საკადასტრო კოდი</th><th>კონტური საიდან არის</th><th>დეტალები</th><th>წყაროს შეცვლა</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div id="emptyList" hidden>სია ცარიელია. დაამატე კოდი ზემოთ, ან გამოიყენე ბრძანება „კონტურები · რუკაზე“ / „კონტურები · KML“.</div>
+  <div class="actions">
+    <button id="openOnMap" class="main" disabled title="ყველა ნაპოვნი კონტური ერთად geojson.io-ს რუკაზე">რუკაზე ჩვენება (geojson.io)</button>
+    <button id="downloadKml" disabled title="თითო კოდზე ცალკე .kml ფაილი">KML ჩამოტვირთვა</button>
+    <button id="downloadGeoJson" disabled title="ყველა კონტური ერთ .geojson ფაილში (mapshaper.org-ისთვის, QGIS-ისთვის)">GeoJSON ფაილი</button>
+    <button id="clearList" class="quiet" disabled title="ყველა სტრიქონის ამოღება (სია ბრაუზერის დახურვისასაც იშლება)">სიის გასუფთავება</button>
+  </div>
+  <div id="message"></div>
+  <div class="legend">
+    <span class="from-map"><span class="dot"></span></span>ლურჯი: კონტური რუკიდან (maps.gov.ge ან ms.gov.ge), მიმდინარე საზღვარი.<br>
+    <span class="from-plan"><span class="dot"></span></span>ნარინჯისფერი: კონტური საკადასტრო გეგმის PDF-იდან არის გამოთვლილი. მიახლოებითია და გეგმის თარიღის მდგომარეობას აჩვენებს.<br>
+    სია გროვდება: ახალი ბრძანება არსებულ სიას ამატებს. „რუკაზე ჩვენება“ მთელ სიას აჩვენებს ერთ რუკაზე.
+  </div>
+  <script type="module" src="contours.js"></script>
+</body>
+</html>

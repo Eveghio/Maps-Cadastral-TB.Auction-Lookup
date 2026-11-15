@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+  <meta charset="utf-8">
+  <title>რეესტრის დოკუმენტები</title>
+  <style>
+    :root { --reg: #8d5a00; --line: #e3d6c3; --muted: #6b6257; --sel: #fff3dc; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { height: 100%; margin: 0; }
+    body { font-family: sans-serif; font-size: 13px; color: #222; background: #f6f3ee; display: flex; flex-direction: column; }
+    header { display: flex; align-items: center; gap: 10px; padding: 7px 12px; background: #fff; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+    #code { font-family: monospace; font-size: 16px; font-weight: 700; }
+    .tabs { display: flex; gap: 2px; background: #efe7da; border-radius: 7px; padding: 2px; }
+    .tabs button { border: none; background: transparent; padding: 5px 11px; border-radius: 5px; cursor: pointer; font-size: 13px; color: #5a4a33; }
+    .tabs button.on { background: var(--reg); color: #fff; }
+    .nav { display: flex; gap: 5px; margin-left: auto; flex-wrap: wrap; }
+    .nav button, .nav a { border: 1px solid var(--reg); background: #fff; color: var(--reg); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12.5px; text-decoration: none; }
+    .nav button:hover, .nav a:hover { background: #fbf5ea; }
+    .nav button:disabled { opacity: 0.4; cursor: default; }
+    main { flex: 1; display: flex; min-height: 0; }
+    aside { width: 330px; min-width: 260px; background: #fff; border-right: 1px solid var(--line); overflow: auto; padding: 8px 8px 16px; }
+    #status { color: var(--muted); font-size: 12px; margin: 2px 4px 8px; min-height: 16px; }
+    #status.err { color: #b91c1c; }
+    .sec { font-size: 11.5px; font-weight: 700; color: var(--muted); margin: 12px 4px 5px; text-transform: none; }
+    .item { display: flex; gap: 8px; padding: 7px 8px; border-radius: 7px; cursor: pointer; border: 1px solid transparent; }
+    .item:hover { background: #faf6ef; }
+    .item.sel { background: var(--sel); border-color: #e9c98f; }
+    .num { min-width: 22px; height: 22px; border-radius: 11px; background: var(--reg); color: #fff; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+    .num.other { background: #9a948c; }
+    .body { flex: 1; min-width: 0; }
+    .when { font-weight: 700; font-size: 13.5px; }
+    .meta { color: var(--muted); font-size: 11.5px; margin-top: 2px; line-height: 1.35; }
+    .pending { color: var(--muted); font-size: 12px; padding: 4px 8px; }
+    #viewer { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    #docbar { padding: 6px 12px; font-size: 12.5px; color: var(--muted); background: #fbf8f3; border-bottom: 1px solid var(--line); min-height: 30px; }
+    #docbar b { color: #222; }
+    .nav button.contour { border-color: #e65100; color: #e65100; }
+    #contourInfo { padding: 6px 12px; font-size: 12.5px; background: #fff7ed; border-bottom: 1px solid #fed7aa; color: #7c2d12; line-height: 1.45; }
+    #contourInfo.problem { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+    iframe { flex: 1; border: none; width: 100%; background: #525659; }
+    #empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; padding: 20px; text-align: center; }
+    .help { color: var(--muted); font-size: 11px; margin: 14px 4px 0; line-height: 1.5; }
+    kbd { border: 1px solid #ccc; border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; font-size: 10.5px; background: #fafafa; }
+  </style>
+</head>
+<body>
+  <header>
+    <span id="code"></span>
+    <div class="tabs">
+      <button data-kind="plan">საკადასტრო გეგმა</button>
+      <button data-kind="extract">ამონაწერი</button>
+    </div>
+    <div class="nav">
+      <button id="newer" title="უფრო ახალი (↑)">‹ უფრო ახალი</button>
+      <button id="older" title="უფრო ძველი (↓, ან შორთქათის ხელახლა დაჭერა)">უფრო ძველი ›</button>
+      <button id="openTab" title="ეს PDF ცალკე ტაბში (რეესტრის ლინკით)">ცალკე გახსნა</button>
+      <button id="download" title="ფაილად შენახვა">ჩამოტვირთვა</button>
+      <button id="contourKml" class="contour" hidden title="ამ გეგმის კონტური .kml ფაილად (PDF-იდან გამოთვლილი, მიახლოებითი)">კონტური → KML</button>
+      <button id="contourMap" class="contour" hidden title="ამ გეგმის კონტური ემატება კონტურების სიას და მთელი სია იხსნება geojson.io-ს რუკაზე">კონტური რუკაზე (+ სია)</button>
+      <a id="pageLink" target="_blank" title="რეესტრის გვერდი ყველა დოკუმენტით">ყველა დოკუმენტი</a>
+    </div>
+  </header>
+  <main>
+    <aside>
+      <div id="status"></div>
+      <div id="list"></div>
+      <div class="help">
+        <kbd>1</kbd>–<kbd>9</kbd> N-ე დოკუმენტი · <kbd>↓</kbd> უფრო ძველი · <kbd>↑</kbd> უფრო ახალი<br>
+        შორთქათის ხელახლა დაჭერა ამ გვერდზე = შემდეგი (უფრო ძველი).<br>
+        1 = ქრონოლოგიურად ბოლო (მომზადების დროით, არა სიის რიგით).
+      </div>
+    </aside>
+    <section id="viewer">
+      <div id="docbar"></div>
+      <div id="contourInfo" hidden></div>
+      <div id="empty">იტვირთება…</div>
+      <iframe id="pdf" hidden title="PDF"></iframe>
+    </section>
+  </main>
+  <script type="module" src="viewer.js"></script>
+</body>
+</html>
