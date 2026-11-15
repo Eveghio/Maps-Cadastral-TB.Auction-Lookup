@@ -82,10 +82,10 @@
       "description": "1.3 maps.gov.ge · KML ფაილ(ებ)ი"
     },
     "1040-maps-person-map": {
-      "description": "1.4 maps.gov.ge · პირადი ნომრით ქონება რუკაზე"
+      "description": "1.4 maps.gov.ge · პ/ნ → რუკა"
     },
     "1050-maps-person-kml": {
-      "description": "1.5 maps.gov.ge · პირადი ნომრით KML"
+      "description": "1.5 maps.gov.ge · პ/ნ → KML"
     },
     "2010-ms-map": {
       "description": "2.1 ms.gov.ge · რუკა: დამატება ღია რუკაზე"

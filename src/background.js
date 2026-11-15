@@ -764,10 +764,12 @@ async function showContoursPage(cadastralCodes, then) {
   return { ok: true }; // history rows are written by the page when it has finished
 }
 
-// popup -> background: just show the list
+// popup -> background: ღილაკი "სია". თუ ველში კოდი(ები) წერია, სიას ემატება (რუკის გახსნის გარეშე);
+// ცარიელი ველით უბრალოდ სია იხსნება
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || message.type !== "contours-open-list") return;
-  showContoursPage([], "none").then(sendResponse);
+  const codesFromInput = extractAllCadastralCodes(String(message.text || ""));
+  showContoursPage(codesFromInput, "none").then(sendResponse);
   return true;
 });
 
@@ -951,7 +953,6 @@ const MENU_ITEMS = [
   { id: "ms-map", title: "ms.gov.ge · რუკაზე დამატება: '%s'" },
   { id: "ms-map-new", title: "ms.gov.ge · ახალ ტაბში: '%s'" },
   { id: "ms-kml", title: "ms.gov.ge · KML: '%s'" },
-  { id: "maps-person", title: "maps.gov.ge · პირადი ნომრის ქონება: '%s'" },
   { id: "ms-app", title: "ms.gov.ge · განცხადება რუკაზე: '%s'" },
   { id: "ms-app-kml", title: "ms.gov.ge · განცხადების KML: '%s'" },
   { type: "separator", id: "sep3" },

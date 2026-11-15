@@ -103,6 +103,19 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
   await hub.click("#clearList");
   console.log("8) cleared: rows", (await table(hub)).length, "| stored:", await sw.evaluate(async () => ((await chrome.storage.session.get("contourCollection")).contourCollection || []).length));
 
+  // 8b) popup-ის ღილაკი "სია" ველში ჩაწერილი კოდით: გასუფთავებული სიის მერე კოდი სიას უნდა დაემატოს
+  const popupPage = watch(await ctx.newPage());
+  await popupPage.goto(`chrome-extension://${id}/popup.html`);
+  await popupPage.fill("#code", `კოდი ${A}`);
+  await popupPage.click("#contoursList").catch(() => {}); // popup თავს ხურავს
+  await hub.waitForFunction((code) => [...document.querySelectorAll("#rows tr")].some((r) => r.innerText.includes(code) && !r.querySelector("td.working")), A, { timeout: 30000 }).catch(() => {});
+  console.log("8b) popup list button with a code: rows", (await table(hub)).length, "->", (await table(hub)).map((t) => t.split(" | ")[0]).join(", "));
+
+  // 8c) უკვე გახსნილ geojson.io-ს ტაბზე ახალი კონტურის დამატება: ტაბი ერთი რჩება და ახალ კოდსაც შეიცავს
+  await sw.evaluate(async (t) => runAction("contours-map", t), B);
+  await hub.waitForTimeout(2500);
+  console.log("8c) map after adding one more code: geojson tabs", ctx.pages().filter((p) => p.url().startsWith("https://geojson.io/")).length, "| features:", geoPage() ? featuresText(decodeLink(geoPage().url())) : "none");
+
   // 9) geojson.io in "this place ->"
   const jump = await sw.evaluate(async () => {
     const loc = await getLocation({ url: "https://geojson.io/?map=16.5%2F41.7084%2F44.7835" });

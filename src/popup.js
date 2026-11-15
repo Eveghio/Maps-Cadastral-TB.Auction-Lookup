@@ -36,7 +36,7 @@ input.addEventListener("keydown", (e) => {
   }
 });
 document.getElementById("contoursList").addEventListener("click", () => {
-  chrome.runtime.sendMessage({ type: "contours-open-list" }, () => window.close());
+  chrome.runtime.sendMessage({ type: "contours-open-list", text: input.value }, () => window.close());
 });
 document.getElementById("historyLink").addEventListener("click", (e) => {
   e.preventDefault();

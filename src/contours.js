@@ -139,26 +139,36 @@ function processWaitingEntries() {
 
 // ---------- შედეგის გამოყენება ----------
 
-let geoJsonIoTabId = null; // ჩვენი გახსნილი geojson.io ტაბი: ხელახლა ჩვენებისას იგივე ტაბი ახლდება
+// ჩვენი გახსნილი geojson.io ტაბი: ხელახლა ჩვენებისას ის იცვლება ახლით იმავე ადგილას.
+// ნომერი chrome.storage.session-შიც ინახება, რომ სიის გვერდის გადატვირთვის მერეც იგივე ტაბი ვიპოვოთ.
+const GEOJSON_TAB_STORAGE_KEY = "contoursGeoJsonIoTabId";
+let geoJsonIoTabId = null;
 
+// geojson.io მონაცემს (#data=...) მხოლოდ გვერდის პირველი ჩატვირთვისას კითხულობს და მერე მისამართს თავისით
+// ცვლის. ამიტომ უკვე გახსნილ ტაბში ახალი ბმულის ჩაწერა (+ reload) საიმედოდ არ მუშაობდა: ახალი კონტური
+// რუკაზე არ ჩნდებოდა. ახლა ძველ ტაბს ვხურავთ და იმავე ფანჯარაში, იმავე პოზიციაზე ვხსნით ახალს.
 async function showOnGeoJsonIo() {
   const link = await buildGeoJsonIoLink(readyContoursOf(entries));
   if (!link) {
     showMessage("კონტურები ბმულისთვის ზედმეტად დიდია. გამოიყენე „GeoJSON ფაილი“ და ფაილი geojson.io-ზე ჩააგდე.", true);
     return;
   }
+  const newTabOptions = { url: link, active: true };
+  if (geoJsonIoTabId === null) geoJsonIoTabId = (await chrome.storage.session.get(GEOJSON_TAB_STORAGE_KEY))[GEOJSON_TAB_STORAGE_KEY] ?? null;
   if (geoJsonIoTabId !== null) {
     try {
-      // geojson.io მონაცემს მხოლოდ გვერდის ჩატვირთვისას კითხულობს, ამიტომ ახალი ბმულის მერე გადატვირთვაც საჭიროა
-      await chrome.tabs.update(geoJsonIoTabId, { url: link, active: true });
-      await chrome.tabs.reload(geoJsonIoTabId);
-      return;
+      const oldTab = await chrome.tabs.get(geoJsonIoTabId);
+      newTabOptions.windowId = oldTab.windowId;
+      newTabOptions.index = oldTab.index;
+      await chrome.tabs.remove(oldTab.id);
     } catch (error) {
-      geoJsonIoTabId = null; // ტაბი დახურულია
+      // ძველი ტაბი უკვე დახურულია: უბრალოდ ახალს ვხსნით
     }
   }
-  const tab = await chrome.tabs.create({ url: link, active: true });
+  const tab = await chrome.tabs.create(newTabOptions);
   geoJsonIoTabId = tab.id;
+  await chrome.storage.session.set({ [GEOJSON_TAB_STORAGE_KEY]: tab.id });
+  if (tab.windowId) await chrome.windows.update(tab.windowId, { focused: true }).catch(() => {});
 }
 
 function saveFile(fileName, text, mimeType) {

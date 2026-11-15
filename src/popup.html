@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <input id="code" type="text" placeholder="კოდი, განცხადების/ლოტის ან პირადი ნომერი" autofocus autocomplete="off">
+  <input id="code" type="text" placeholder="კოდი, განცხადების ან ლოტის ნომერი" autofocus autocomplete="off">
 
   <div class="row maps">
     <span class="site">maps.gov.ge</span>
@@ -34,12 +34,8 @@
     <button data-action="maps-map" data-new="1">ახალ ტაბში</button>
     <button data-action="maps-kml" title="თითო კოდზე ცალკე .kml ფაილი">KML</button>
   </div>
-  <div class="row maps">
-    <span class="site">maps · პირადი №</span>
-    <button data-action="maps-person" title="11-ნიშნა პირადი ნომრით მესაკუთრის ნაკვეთები maps.gov.ge რუკაზე (Shift+კლიკი = ახალ ტაბში)">რუკაზე</button>
-    <button data-action="maps-person" data-new="1">ახალ ტაბში</button>
-    <button data-action="maps-person-kml" title="ყველა ნაკვეთი ერთ .kml ფაილში">KML</button>
-  </div>
+  <!-- პირადი ნომრით ძებნას ღილაკი განზრახ არ აქვს (თვალში საცემი რომ არ იყოს). ის მუშაობს:
+       ველში 11-ნიშნა ნომერი + Enter, ან შორთქათები 1040 / 1050 (chrome://extensions/shortcuts) -->
   <div class="row ms">
     <span class="site">ms.gov.ge</span>
     <button data-action="ms-map" title="ღია ms.gov.ge რუკას დაემატება (Shift+კლიკი = ახალ ტაბში)">რუკაზე</button>
@@ -62,7 +58,7 @@
     <span class="site">კონტურები</span>
     <button data-action="contours-map" title="კოდები ემატება კონტურების სიას და მთელი სია იხსნება geojson.io-ს რუკაზე. რომელი კოდიც რუკებზე აღარ არის, იმის კონტური ბოლო საკადასტრო გეგმიდან გამოითვლება">რუკაზე</button>
     <button data-action="contours-kml" title="თითო კოდზე .kml: რუკიდან, ხოლო თუ რუკებზე არ არის, ბოლო საკადასტრო გეგმიდან">KML</button>
-    <button id="contoursList" title="კონტურების სია: წყაროს შეცვლა (რუკა / რომელი გეგმა), ამოღება, გასუფთავება">სია</button>
+    <button id="contoursList" title="კონტურების სია: ველში ჩაწერილი კოდები სიას ემატება (რუკის გახსნის გარეშე); ცარიელი ველით უბრალოდ სია იხსნება. სიაში: წყაროს შეცვლა (რუკა / რომელი გეგმა), ამოღება, გასუფთავება">სია</button>
   </div>
   <div class="row other">
     <span class="site">აუქციონი</span>
@@ -81,7 +77,7 @@
 
   <div id="msg"></div>
   <div class="hint">
-    <span>Enter = რუკა (კოდი/პირადი № → maps, განცხადება → ms)</span>
+    <span>Enter = რუკა (კოდი → maps, განცხადება → ms)</span>
     <a href="#" id="historyLink">ისტორია</a>
   </div>
   <script src="shared-ui.js"></script>
