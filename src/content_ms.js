@@ -281,7 +281,7 @@
   function moreButton(a, i) {
     const button = document.createElement("button");
     button.className = "more" + (isMenuOpen(a, i) ? " open" : "");
-    button.textContent = "⋯";
+    button.textContent = i === null ? "ყველა ▾" : "⋯";
     button.title = i === null ? "ყველა კონტური: სიაში / geojson.io" : "ამონაწერი, გეგმა, სიაში, geojson.io, კოპირება";
     button.addEventListener("click", (event) => {
       event.stopPropagation();

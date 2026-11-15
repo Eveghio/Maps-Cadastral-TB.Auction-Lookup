@@ -169,8 +169,64 @@ async function showOnGeoJsonIo() {
   }
   const tab = await chrome.tabs.create(newTabOptions);
   geoJsonIoTabId = tab.id;
+  chooseCodeAsGeoJsonIoLabel(tab.id); // ფონურად: ლოდინი არ სჭირდება
   await chrome.storage.session.set({ [GEOJSON_TAB_STORAGE_KEY]: tab.id });
   if (tab.windowId) await chrome.windows.update(tab.windowId, { focused: true }).catch(() => {});
+}
+
+// geojson.io-ზე ზედა მარცხენა "Label:" ავტომატურად "კოდი" ხდება (რუკაზე და სიაში კოდები ჩანს).
+// geojson.io ამ არჩევანს არც ბმულით იღებს და არც ინახავს (მხოლოდ გვერდის მეხსიერებაშია), ამიტომ
+// გვერდის ჩატვირთვის შემდეგ ექსთენშენი თავად აჭერს "Label:" ღილაკს და ირჩევს "კოდი"-ს.
+// თუ geojson.io-ს გვერდი შეიცვალა და ღილაკი ვერ მოიძებნა, უბრალოდ არაფერი ხდება.
+const GEOJSON_IO_LABEL_PROPERTY = "კოდი"; // contours_core.js-ის buildGeoJsonFeature-ის თვისება
+
+function chooseCodeAsGeoJsonIoLabel(tabId) {
+  let done = false, failedAttempts = 0;
+  // ვცდით, როცა ტაბი geojson.io-ზე ჩატვირთულია. თუ ვერ მოხერხდა (მაგ. გვერდი ჯერ ბოლომდე არ გახსნილა),
+  // წამში ერთხელ ისევ ვცდით (მაქს. 20-ჯერ)
+  const tryInject = (tab) => {
+    if (done || !tab || tab.status !== "complete" || !/^https:\/\/geojson\.io\//.test(tab.url || "")) return;
+    done = true;
+    chrome.scripting.executeScript({ target: { tabId }, func: chooseLabelOnGeoJsonIoPage, args: [GEOJSON_IO_LABEL_PROPERTY] })
+      .then(stopListening, () => {
+        done = false;
+        if (++failedAttempts < 20) setTimeout(() => chrome.tabs.get(tabId).then(tryInject).catch(() => {}), 1000);
+      });
+  };
+  const onTabUpdated = (updatedTabId, changeInfo, tab) => { if (updatedTabId === tabId) tryInject(tab); };
+  const stopListening = () => chrome.tabs.onUpdated.removeListener(onTabUpdated);
+  chrome.tabs.onUpdated.addListener(onTabUpdated);
+  chrome.tabs.get(tabId).then(tryInject).catch(() => {}); // გვერდი შეიძლება უკვე ჩატვირთულიყო
+  setTimeout(stopListening, 60000); // ტაბი არ ჩაიტვირთა
+}
+
+// ეს ფუნქცია geojson.io-ს გვერდზე სრულდება (ამიტომ გარე ცვლადებს ვერ იყენებს)
+async function chooseLabelOnGeoJsonIoPage(labelProperty) {
+  const pause = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+  const findLabelButton = () => [...document.querySelectorAll("button")].find((button) => /^\s*Label:/.test(button.textContent));
+  const findLabelSelect = () => [...document.querySelectorAll("select")].find((candidate) => [...candidate.options].some((option) => option.value === labelProperty));
+  const deadline = Date.now() + 20000; // გვერდი და მონაცემი 20 წამში უნდა გამოჩნდეს
+  while (Date.now() < deadline) {
+    const labelButton = findLabelButton();
+    if (labelButton) {
+      if (labelButton.textContent.replace(/^\s*Label:\s*/, "").trim()) return; // label უკვე არჩეულია: არ ვეხებით
+      labelButton.click(); // იხსნება პატარა ფანჯარა ჩამოსაშლელი სიით
+      let select = null;
+      for (let check = 0; check < 30 && !select; check++) { // ფანჯარას 3 წამამდე ველოდებით
+        await pause(100);
+        select = findLabelSelect();
+      }
+      if (select) {
+        select.value = labelProperty;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        await pause(100);
+        if (findLabelSelect()) labelButton.click(); // ფანჯრის დახურვა
+        return;
+      }
+      if (findLabelButton()) findLabelButton().click(); // მონაცემი ჯერ არ ჩატვირთულა: ვხურავთ და ისევ ვცდით
+    }
+    await pause(500);
+  }
 }
 
 function saveFile(fileName, text, mimeType) {

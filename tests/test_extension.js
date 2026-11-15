@@ -37,7 +37,15 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
       { appId: "AR777", type: "სატესტო თემა", geometry: WKT_A, appUrl: "", objectid: 2 }] }) });
     r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ naprSearchResult: code === B || code === H ? { cadCode: code, wktShape: WKT_B } : { cadCode: null, wktShape: null } }) });
   });
-  await ctx.route("https://geojson.io/**", (r) => r.fulfill({ status: 200, contentType: "text/html", body: "<html><title>geojson.io mock</title></html>" }));
+  // geojson.io-ს იმიტაცია: ღილაკი "Label:", რომელიც (დაგვიანებით) ხსნის ფანჯარას <select>-ით, როგორც ნამდვილ საიტზე
+  const GEOJSON_IO_MOCK = `<html><title>geojson.io mock</title><body><button id="lb">Label: </button><div id="pop"></div><script>
+    let label = "", open = false;
+    const lb = document.getElementById("lb"), pop = document.getElementById("pop");
+    const draw = () => { lb.textContent = "Label: " + label; pop.innerHTML = open ? '<select id="sel"><option value=""></option><option value="კოდი">კოდი</option><option value="წყარო">წყარო</option></select>' : "";
+      if (open) { const sel = document.getElementById("sel"); sel.value = label; sel.addEventListener("change", (e) => { label = e.target.value; draw(); }); } };
+    lb.addEventListener("click", () => { open = !open; setTimeout(draw, 150); });
+  </script></body></html>`;
+  await ctx.route("https://geojson.io/**", (r) => r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: GEOJSON_IO_MOCK }));
   let [sw] = ctx.serviceWorkers(); if (!sw) sw = await ctx.waitForEvent("serviceworker");
   const id = new URL(sw.url()).host;
   const errs = [];
@@ -155,6 +163,10 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
     await msPage.screenshot({ path: path.join(OUT, "ms_panel_menu.png") });
     console.log("8e) panel menu:", menuTexts.join(" | "));
   } else console.log("8e) panel: ms.gov.ge tab not found");
+
+  // 8f) geojson.io-ზე "Label:" ავტომატურად "კოდი" ხდება
+  if (geoPage()) await geoPage().waitForFunction(() => /კოდი/.test(document.querySelector("#lb").textContent) && !document.querySelector("#pop select"), null, { timeout: 15000 }).catch(() => {});
+  if (geoPage()) console.log("8f) geojson.io label:", JSON.stringify(await geoPage().locator("#lb").innerText()), "| popup closed:", (await geoPage().locator("#pop select").count()) === 0);
 
   // 9) geojson.io in "this place ->"
   const jump = await sw.evaluate(async () => {
