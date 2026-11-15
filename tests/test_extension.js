@@ -116,6 +116,17 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
   await hub.waitForTimeout(2500);
   console.log("8c) map after adding one more code: geojson tabs", ctx.pages().filter((p) => p.url().startsWith("https://geojson.io/")).length, "| features:", geoPage() ? featuresText(decodeLink(geoPage().url())) : "none");
 
+  // 8d) "წერტილი -> კოდი" ფანჯრის ღილაკები "სიაში" და "geojson.io"
+  await sw.evaluate(async (code) => chrome.storage.session.set({ result_t8d: { kind: "point", place: { lat: 41.7, lon: 44.78, how: "ტესტი" }, items: [{ cad: code, address: "" }] } }), C2);
+  const resultPage = watch(await ctx.newPage());
+  await resultPage.goto(`chrome-extension://${id}/result.html#t8d`);
+  await resultPage.locator("button.b-cont", { hasText: "სიაში" }).click();
+  await hub.waitForFunction((code) => [...document.querySelectorAll("#rows tr")].some((r) => r.innerText.includes(code) && !r.querySelector("td.working")), C2, { timeout: 30000 }).catch(() => {});
+  console.log("8d) result window 'სიაში': rows", (await table(hub)).map((t) => t.split(" | ")[0]).join(", "));
+  await resultPage.locator("button.b-cont", { hasText: "geojson.io" }).click();
+  await hub.waitForTimeout(2500);
+  console.log("8d) result window 'geojson.io': geojson tabs", ctx.pages().filter((p) => p.url().startsWith("https://geojson.io/")).length, "| features:", geoPage() ? featuresText(decodeLink(geoPage().url())) : "none");
+
   // 9) geojson.io in "this place ->"
   const jump = await sw.evaluate(async () => {
     const loc = await getLocation({ url: "https://geojson.io/?map=16.5%2F41.7084%2F44.7835" });

@@ -25,6 +25,16 @@ function run(action, text, btn) {
   });
 }
 
+// კონტურების სიაში დამატება ისე, როგორც popup-ის ღილაკი "სია" (ველში ჩაწერილი კოდით)
+function addToContourList(cadastralCode, btn) {
+  const oldText = btn.textContent.replace(/^[✓!] /, "");
+  btn.textContent = "…";
+  chrome.runtime.sendMessage({ type: "contours-open-list", text: cadastralCode }, (res) => {
+    btn.textContent = res && res.ok ? "✓ " + oldText : "! " + oldText;
+    backToFront();
+  });
+}
+
 // copy from this (focused) window; the background copy is only a fallback
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; } catch (e) { return false; }
@@ -59,6 +69,8 @@ function itemBox(it) {
     button("b-maps", "maps.gov.ge რუკა", "ღია maps.gov.ge რუკაზე დამატება", (b) => run("maps-map", it.cad, b)),
     button("b-maps", "KML", "maps.gov.ge-დან .kml", (b) => run("maps-kml", it.cad, b)),
     button("b-ms", "ms.gov.ge რუკა", "ms.gov.ge რუკაზე დამატება", (b) => run("ms-map", it.cad, b)),
+    button("b-cont", "სიაში", "კონტურების სიაში დამატება (რუკის გახსნის გარეშე)", (b) => addToContourList(it.cad, b)),
+    button("b-cont", "geojson.io", "სიაში დამატება და მთელი სია geojson.io-ს რუკაზე", (b) => run("contours-map", it.cad, b)),
     button("b-reg", "ამონაწერი", "ქრონოლოგიურად ბოლო ამონაწერი", (b) => run("pdf", it.cad, b)),
     button("b-reg", "გეგმა", "ბოლო საკადასტრო გეგმა", (b) => run("plan", it.cad, b)),
     button("b-reg", "ყველა დოკ.", "რეესტრის გვერდი ყველა დოკუმენტით", (b) => run("abstract", it.cad, b)),
