@@ -170,6 +170,15 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
   await popup.goto(`chrome-extension://${id}/popup.html`); await popup.waitForTimeout(500);
   await popup.screenshot({ path: path.join(OUT, "popup.png"), fullPage: true });
 
+  // 10b) ისტორიის ფილტრი "პირადი ნომრით" ჩანს მხოლოდ მაშინ, როცა ასეთი ჩანაწერი ისტორიაშია
+  const historyPage = watch(await ctx.newPage());
+  await historyPage.goto(`chrome-extension://${id}/history.html`); await historyPage.waitForTimeout(800);
+  const personChips = () => historyPage.locator("#actionChips").innerText().then((t) => (t.match(/პირადი ნომრით/g) || []).length);
+  const chipsBefore = await personChips();
+  await sw.evaluate(async () => addHistory("maps-person", [{ code: "01234567890", status: "missing", error: "" }]));
+  await historyPage.waitForTimeout(800);
+  console.log("10b) person filter chips: before", chipsBefore, "-> after a person row", await personChips());
+
   // 11) the user's updated HTML on the same PDFs
   if (ORIGINAL_HTML) {
     const files = ["plan_c_2026.pdf", "plan_c_2015.pdf", "plan_hole_rc4.pdf", "plan_one_line.pdf", "plan_2010_spaces.pdf"];

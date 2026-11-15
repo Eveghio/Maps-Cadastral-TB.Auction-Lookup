@@ -53,12 +53,17 @@ function toggle(set, value, on) {
   render();
 }
 
+// ეს ფილტრები ჩანს მხოლოდ მაშინ, თუ ისტორიაში ასეთი ჩანაწერი მართლა არის (პირადი ნომრით ძებნა თვალში არ უნდა ეცემოდეს)
+const ACTIONS_SHOWN_ONLY_IF_USED = ["maps-person", "maps-person-kml"];
+
 function buildFilters() {
   const ac = el("actionChips");
   ac.textContent = "";
+  const usedActions = new Set(all.map((row) => row.action)); // ერთი გავლა ისტორიაზე: მსუბუქია
   // grouped by site, coloured like the popup rows
   for (const site of Object.keys(SITES)) {
-    const actions = Object.keys(ACTIONS).filter((a) => ACTIONS[a].site === site);
+    const actions = Object.keys(ACTIONS).filter((a) => ACTIONS[a].site === site
+      && (!ACTIONS_SHOWN_ONLY_IF_USED.includes(a) || usedActions.has(a) || state.actions.has(a)));
     if (!actions.length) continue;
     const g = document.createElement("span");
     g.className = "group";
@@ -303,6 +308,7 @@ function render() {
 
 async function load() {
   all = (await chrome.storage.local.get(HISTORY_KEY))[HISTORY_KEY] || [];
+  buildFilters(); // ფილტრების სია ისტორიის შიგთავსზეა დამოკიდებული (იხ. ACTIONS_SHOWN_ONLY_IF_USED)
   render();
 }
 
