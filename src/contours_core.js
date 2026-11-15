@@ -16,12 +16,14 @@
 export const CONTOUR_SOURCE = {
   MAPS: "maps.gov.ge",
   MS: "ms.gov.ge",
-  PLAN: "plan" // საკადასტრო გეგმის PDF-იდან გამოთვლილი (მიახლოებითი)
+  PLAN: "plan", // საკადასტრო გეგმის PDF-იდან გამოთვლილი (მიახლოებითი)
+  APPLICATION: "application" // ms.gov.ge-ს განცხადებაზე დატანილი კონტური (საკადასტრო კოდის გარეშე)
 };
 
 // ფერები რუკაზე: რუკიდან მოსული (ზუსტი) ლურჯია, გეგმიდან გამოთვლილი (მიახლოებითი) ნარინჯისფერი
 const COLOR_FROM_MAP = "#1d6fb8";
 const COLOR_FROM_PLAN = "#e65100";
+const COLOR_FROM_APPLICATION = "#2e7d32"; // განცხადების კონტური: მწვანე
 
 const GEOJSON_IO_ADDRESS = "https://geojson.io/";
 // geojson.io მონაცემს ბმულშივე იღებს; ძალიან გრძელ ბმულს ბრაუზერი ვერ გახსნის
@@ -40,6 +42,7 @@ export function formatDate(dateMs) {
 
 // მოკლე წარწერა: საიდან არის კონტური. მაგ. "maps.gov.ge" ან "საკადასტრო გეგმა 05.08.2014"
 export function describeSource(contour) {
+  if (contour.source === CONTOUR_SOURCE.APPLICATION) return "განცხადება (ms.gov.ge)";
   if (contour.source !== CONTOUR_SOURCE.PLAN) return contour.source;
   return contour.planDateMs ? `საკადასტრო გეგმა ${formatDate(contour.planDateMs)}` : "საკადასტრო გეგმა";
 }
@@ -83,12 +86,17 @@ export function buildGeoJsonFeature(contour) {
     : { type: "MultiPolygon", coordinates: rings };
 
   const isFromPlan = contour.source === CONTOUR_SOURCE.PLAN;
-  const color = isFromPlan ? COLOR_FROM_PLAN : COLOR_FROM_MAP;
+  const isFromApplication = contour.source === CONTOUR_SOURCE.APPLICATION;
+  const color = isFromPlan ? COLOR_FROM_PLAN : isFromApplication ? COLOR_FROM_APPLICATION : COLOR_FROM_MAP;
   const properties = {
     "კოდი": contour.cadastralCode,
     "წყარო": describeSource(contour)
   };
   if (contour.address) properties["მისამართი"] = contour.address;
+  if (isFromApplication) {
+    properties["განცხადება"] = contour.applicationNumber || "";
+    if (contour.applicationTopic) properties["თემა"] = contour.applicationTopic;
+  }
   if (isFromPlan) {
     properties["სიზუსტე"] = contour.accuracyMeters
       ? `მიახლოებითი: ჩვეულებრივ ±${contour.accuracyMeters.typical.toFixed(1)} მ, მაქს. ±${contour.accuracyMeters.max.toFixed(1)} მ`

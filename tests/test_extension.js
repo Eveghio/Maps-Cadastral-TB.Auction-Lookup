@@ -12,6 +12,8 @@ const WKT_B = "MULTIPOLYGON (((44.79 41.71, 44.791 41.71, 44.791 41.711, 44.79 4
 const decodeLink = (url) => JSON.parse(zlib.gunzipSync(Buffer.from(url.split("#data=gz:")[1], "base64url")).toString("utf8"));
 const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდი"]}/${f.properties["წყარო"]}`).join(" ; ");
 (async () => {
+  // ყოველ ჯერზე სუფთა პროფილი: ძველ პროფილში Chrome service worker-ის ძველ ასლს იყენებს
+  fs.rmSync(path.join(OUT, "profile"), { recursive: true, force: true });
   const ctx = await chromium.launchPersistentContext(path.join(OUT, "profile"), { headless: false, viewport: { width: 1280, height: 760 },
     args: ["--headless=new", `--disable-extensions-except=${EXT}`, `--load-extension=${EXT}`] });
   await ctx.route("https://abstract.reestri.gov.ge/**", (r) => r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: listHtml(new URL(r.request().url()).searchParams.get("cad_code")) }));
@@ -27,7 +29,12 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
     return r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: [{ name: A, shape: WKT_A, shape_format: "WKT", proj: "EPSG:4326" }] }) });
   });
   await ctx.route("https://ms.gov.ge/**", (r) => {
+    if (r.request().method() === "GET") return r.fulfill({ status: 200, contentType: "text/html", body: "<html><body>ms.gov.ge mock</body></html>" });
     const code = JSON.parse(r.request().postData() || "{}").searchText;
+    // განცხადება AR777: ორი კონტური საკადასტრო კოდის გარეშე
+    if (code === "AR777") return r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ architectureResult: [
+      { appId: "AR777", type: "სატესტო თემა", geometry: WKT_B, appUrl: "", objectid: 1 },
+      { appId: "AR777", type: "სატესტო თემა", geometry: WKT_A, appUrl: "", objectid: 2 }] }) });
     r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ naprSearchResult: code === B || code === H ? { cadCode: code, wktShape: WKT_B } : { cadCode: null, wktShape: null } }) });
   });
   await ctx.route("https://geojson.io/**", (r) => r.fulfill({ status: 200, contentType: "text/html", body: "<html><title>geojson.io mock</title></html>" }));
@@ -126,6 +133,28 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
   await resultPage.locator("button.b-cont", { hasText: "geojson.io" }).click();
   await hub.waitForTimeout(2500);
   console.log("8d) result window 'geojson.io': geojson tabs", ctx.pages().filter((p) => p.url().startsWith("https://geojson.io/")).length, "| features:", geoPage() ? featuresText(decodeLink(geoPage().url())) : "none");
+
+  // 8e) განცხადების კონტურები კოდის გარეშე: სიაში მზა პოლიგონით (მწვანე), შემდეგ geojson.io
+  await hub.click("#clearList").catch(() => {});
+  const appList = await hub.evaluate(() => chrome.runtime.sendMessage({ type: "ms-app-contours", number: "AR777", action: "list", center: null }));
+  await hub.waitForTimeout(1500);
+  console.log("8e) application 'ყველა სიაში':", JSON.stringify(appList), "| rows:", (await table(hub)).join(" ; "));
+  const appListAgain = await hub.evaluate(() => chrome.runtime.sendMessage({ type: "ms-app-contours", number: "AR777", action: "map", center: null }));
+  await hub.waitForTimeout(2500);
+  console.log("8e) again + map:", JSON.stringify(appListAgain), "| rows:", (await table(hub)).length, "| features:", geoPage() ? featuresText(decodeLink(geoPage().url())) : "none");
+  // პანელი ms.gov.ge-ზე: "⋯" მენიუ
+  await sw.evaluate(async () => runAction("ms-app", "AR777", true));
+  await hub.waitForTimeout(3000);
+  const msPage = ctx.pages().find((p) => p.url().startsWith("https://ms.gov.ge/msmap"));
+  if (msPage) {
+    watch(msPage);
+    await msPage.waitForTimeout(1500);
+    const panelHost = msPage.locator("#napr-app-panel");
+    await panelHost.locator(".item .more").first().click();
+    const menuTexts = await panelHost.locator(".menu button").allInnerTexts();
+    await msPage.screenshot({ path: path.join(OUT, "ms_panel_menu.png") });
+    console.log("8e) panel menu:", menuTexts.join(" | "));
+  } else console.log("8e) panel: ms.gov.ge tab not found");
 
   // 9) geojson.io in "this place ->"
   const jump = await sw.evaluate(async () => {

@@ -193,9 +193,17 @@
         .item a { flex: none; font-size: 11px; color: #1d6fb8; text-decoration: none; white-space: nowrap; padding-top: 2px; }
         .acts { flex: none; display: flex; align-items: center; gap: 6px; }
         .hint { font-size: 10.5px; color: #888; padding: 0 8px 6px; }
+        .more { flex: none; font: 700 12px sans-serif; padding: 0 6px; border: 1px solid #c9d7e8; border-radius: 4px; background: #fff; color: #1d6fb8; cursor: pointer; line-height: 16px; }
+        .more:hover, .more.open { background: #e8f0fa; }
+        .menu { display: flex; flex-wrap: wrap; gap: 4px; margin: -1px 0 4px 22px; }
+        .menu button { font: 600 10.5px sans-serif; padding: 2px 7px; border-radius: 4px; border: 1px solid; background: #fff; cursor: pointer; }
+        .menu .reg { color: #8d5a00; border-color: #8d5a00; }
+        .menu .cont { color: #e65100; border-color: #e65100; }
+        .menu .copy { color: #555; border-color: #888; }
+        .menu button:hover { filter: brightness(0.85); background: #f6f6f6; }
       </style>
       <div class="box"><div class="head"><b>განცხადებები</b><button title="დახურვა (Esc)">×</button></div><div class="body"></div>
-      <div class="hint">კონტურზე დაჭერა = რუკაზე დასმა · KML = ფაილის ჩამოტვირთვა · Esc = დახურვა</div></div>`;
+      <div class="hint">კონტურზე დაჭერა = რუკაზე დასმა · KML = ფაილი · ⋯ = სხვა მოქმედებები · Esc = დახურვა</div></div>`;
       root.querySelector(".head button").addEventListener("click", closePanel);
       // the panel can be dragged out of the way by its header
       const box = root.querySelector(".box"), head = root.querySelector(".head");
@@ -229,11 +237,13 @@
       grow.className = "grow";
       num.appendChild(grow);
       if (app.items.length > 1) num.appendChild(kmlButton(app, null, "KML (ყველა)", "ყველა კონტური ერთ .kml ფაილში"));
+      if (app.items.length > 1) num.appendChild(moreButton(a, null));
       const types = [...new Set(app.items.map((it) => it.type).filter(Boolean))];
       const type = document.createElement("div");
       type.className = "type";
       type.textContent = types.join("; ");
       wrap.append(num, type);
+      if (isMenuOpen(a, null)) wrap.appendChild(menuElement(app, null));
       app.items.forEach((it, i) => {
         const b = document.createElement("div");
         b.className = "item" + (active && active.a === a && active.i === i ? " on" : "") + (it.bad ? " bad" : "");
@@ -253,12 +263,75 @@
           acts.appendChild(l);
         }
         acts.appendChild(kmlButton(app, i, "KML", "ამ კონტურის .kml ფაილი"));
+        acts.appendChild(moreButton(a, i));
         b.append(n, main, acts);
         b.addEventListener("click", () => select(a, i));
         wrap.appendChild(b);
+        if (isMenuOpen(a, i)) wrap.appendChild(menuElement(app, it));
       });
       body.appendChild(wrap);
     });
+  }
+
+  // ---- "⋯" მენიუ: დამატებითი მოქმედებები, რომ პანელი არ გადაიტვირთოს ღილაკებით ----
+  // ერთ ჯერზე ერთი მენიუა ღია: openMenu = { a: განცხადების ინდექსი, i: კონტურის ინდექსი ან null (მთელი განცხადება) }
+  let openMenu = null;
+  const isMenuOpen = (a, i) => !!openMenu && openMenu.a === a && openMenu.i === i;
+
+  function moreButton(a, i) {
+    const button = document.createElement("button");
+    button.className = "more" + (isMenuOpen(a, i) ? " open" : "");
+    button.textContent = "⋯";
+    button.title = i === null ? "ყველა კონტური: სიაში / geojson.io" : "ამონაწერი, გეგმა, სიაში, geojson.io, კოპირება";
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openMenu = isMenuOpen(a, i) ? null : { a, i };
+      renderPanel();
+    });
+    return button;
+  }
+
+  // მენიუს ღილაკი: მოქმედება ასრულებს შეტყობინებას background-თან და შედეგს ღილაკზე აჩვენებს (✓ / !)
+  function menuButton(className, text, title, sendAction) {
+    const button = document.createElement("button");
+    button.className = className;
+    button.textContent = text;
+    button.title = title;
+    button.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      button.textContent = "…";
+      let result = null;
+      try { result = await sendAction(); } catch (error) { result = { ok: false, error: error.message }; }
+      button.textContent = (result && result.ok ? "✓ " : "! ") + text;
+      if (result && !result.ok) button.title = result.error || "";
+    });
+    return button;
+  }
+
+  // item = null: მთელი განცხადება
+  function menuElement(app, item) {
+    const menu = document.createElement("div");
+    menu.className = "menu";
+    const contoursRequest = (action) => chrome.runtime.sendMessage({ type: "ms-app-contours", number: app.number, action, center: item ? item.center : null });
+    const extensionAction = (action) => chrome.runtime.sendMessage({ type: "run", action, text: item.cad, newTab: false });
+    if (item && item.cad) {
+      menu.append(
+        menuButton("reg", "ამონაწერი", "ქრონოლოგიურად ბოლო ამონაწერი", () => extensionAction("pdf")),
+        menuButton("reg", "გეგმა", "ბოლო საკადასტრო გეგმა", () => extensionAction("plan"))
+      );
+    }
+    const noCodeNote = item && !item.cad ? " (კოდი არ აქვს: ემატება განცხადების კონტური)" : "";
+    menu.append(
+      menuButton("cont", item ? "სიაში" : "ყველა სიაში", "კონტურების სიაში დამატება" + noCodeNote, () => contoursRequest("list")),
+      menuButton("cont", item ? "geojson.io" : "ყველა geojson.io", "სიაში დამატება და მთელი სია geojson.io-ზე" + noCodeNote, () => contoursRequest("map"))
+    );
+    if (item && item.cad) {
+      menu.append(menuButton("copy", "კოპირება", "კოდის კოპირება", async () => {
+        await navigator.clipboard.writeText(item.cad);
+        return { ok: true };
+      }));
+    }
+    return menu;
   }
 
   // KML of one contour (index) or of the whole application (index = null), made by the extension

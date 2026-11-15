@@ -1434,6 +1434,59 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
+// ms.gov.ge-ს პანელი: განცხადების კონტური(ები) კონტურების სიაში (action "list") ან სიაში + geojson.io-ზე ("map").
+// საკადასტრო კოდიანი კონტური სიას კოდით ემატება (ჩვეულებრივად: რუკა -> გეგმა). კოდის გარეშე კონტური კი
+// განცხადების საკუთარი პოლიგონით: ის სიაში მზა სახით ინახება (chrome.storage.session, ბრაუზერის დახურვამდე),
+// რადგან ხელახლა მოსაძებნად ms.gov.ge-ს ძებნა თავიდან იქნებოდა საჭირო.
+const CONTOURS_STORAGE_KEY = "contourCollection"; // იგივე გასაღები, რაც contours.js-ში
+
+// განცხადების ერთი კონტური (ცენტრით) ან ყველა (center = null)
+function pickApplicationContours(app, center) {
+  if (!Array.isArray(center) || center.length !== 2) return app.items;
+  let best = null, bestDistance = Infinity;
+  for (const item of app.items) {
+    if (!item.center) continue;
+    const distance = Math.hypot(item.center[0] - center[0], item.center[1] - center[1]);
+    if (distance < bestDistance) { bestDistance = distance; best = item; }
+  }
+  return best && bestDistance <= 1e-5 ? [best] : [];
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!message || message.type !== "ms-app-contours" || !message.number) return;
+  (async () => {
+    const number = String(message.number).toUpperCase();
+    const [app] = await lookupApps([number]);
+    if (app.status !== "found") return sendResponse({ ok: false, error: app.error || "ვერ მოიძებნა" });
+    const chosenItems = pickApplicationContours(app, message.center);
+    if (!chosenItems.length) return sendResponse({ ok: false, error: "კონტური ვერ ვიპოვე" });
+
+    const cadastralCodes = [...new Set(chosenItems.filter((item) => item.cad).map((item) => item.cad))];
+    const itemsWithoutCode = chosenItems.filter((item) => !item.cad && item.polys);
+    if (itemsWithoutCode.length) {
+      const stored = (await chrome.storage.session.get(CONTOURS_STORAGE_KEY))[CONTOURS_STORAGE_KEY] || [];
+      for (const item of itemsWithoutCode) {
+        const contourNumber = app.items.indexOf(item) + 1;
+        const alreadyInList = stored.some((entry) => entry.wantedSource === "application" && entry.applicationNumber === number && entry.contourNumber === contourNumber);
+        if (alreadyInList) continue;
+        const label = `${number} · კონტური ${contourNumber}`;
+        stored.push({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          cadastralCode: label, wantedSource: "application", applicationNumber: number, contourNumber, planNumber: 1,
+          state: "ready", problemText: "", mapProblems: [], plans: null, progressText: "",
+          contour: { cadastralCode: label, source: "application", polygons: item.polys, address: item.address || "",
+            applicationNumber: number, applicationTopic: item.type || "", planDateMs: null, accuracyMeters: null, warnings: [] }
+        });
+      }
+      await chrome.storage.session.set({ [CONTOURS_STORAGE_KEY]: stored });
+    }
+    if (!cadastralCodes.length && !itemsWithoutCode.length) return sendResponse({ ok: false, error: "გეომეტრია ვერ წავიკითხე" });
+    await showContoursPage(cadastralCodes, message.action === "map" ? "map" : "none");
+    sendResponse({ ok: true });
+  })().catch((err) => sendResponse({ ok: false, error: err.message }));
+  return true;
+});
+
 // History page: open one stored contour again (the site's search is used to draw it)
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || message.type !== "ms-app-open" || !message.number) return;

@@ -8,6 +8,8 @@
 //   1. ბრძანება "კონტურები · რუკაზე" / "კონტურები · KML" (background.js -> requestFromBackground)
 //   2. viewer-ის ღილაკი "კონტური რუკაზე": იქ ნაჩვენები გეგმის მზა კონტური (viewer.js წერს პირდაპირ საცავში)
 //   3. ამ გვერდის ველი "კოდის დამატება"
+//   4. ms.gov.ge-ს განცხადების პანელი: კოდის გარეშე კონტური მზა პოლიგონით (wantedSource "application",
+//      background.js წერს პირდაპირ საცავში; წყაროს შეცვლა მას არ აქვს)
 //
 // თითო ჩანაწერს აქვს "რა გვინდა" (wantedSource):
 //   "auto"  ჯერ რუკები (maps.gov.ge, მერე ms.gov.ge); თუ კოდი რუკებზე არ არის, ბოლო საკადასტრო გეგმა
@@ -262,6 +264,7 @@ function detailsElement(entry) {
 
   const contour = entry.contour;
   if (contour && contour.address) addLine(contour.address);
+  if (contour && contour.source === CONTOUR_SOURCE.APPLICATION && contour.applicationTopic) addLine(contour.applicationTopic);
   if (contour && contour.source === CONTOUR_SOURCE.PLAN) {
     if (contour.areaInPdf != null) {
       addLine(`ფართობი გეგმაში ${contour.areaInPdf} კვ.მ, კონტურიდან ${contour.areaCalculated.toFixed(1)} კვ.მ (სხვაობა ${contour.areaDifferencePercent.toFixed(2)}%)`,
@@ -352,7 +355,7 @@ function render() {
     const sourceCell = document.createElement("td");
     sourceCell.className = "source";
     if (entry.state === "ready") {
-      sourceCell.classList.add(entry.contour.source === CONTOUR_SOURCE.PLAN ? "from-plan" : "from-map");
+      sourceCell.classList.add({ [CONTOUR_SOURCE.PLAN]: "from-plan", [CONTOUR_SOURCE.APPLICATION]: "from-application" }[entry.contour.source] || "from-map");
       const dot = document.createElement("span");
       dot.className = "dot";
       sourceCell.append(dot, describeSource(entry.contour));
@@ -366,7 +369,8 @@ function render() {
 
     const controlsCell = document.createElement("td");
     controlsCell.className = "controls";
-    controlsCell.append(
+    const isApplicationContour = entry.wantedSource === "application"; // მზა პოლიგონი: წყარო და ასლი არ აქვს
+    if (!isApplicationContour) controlsCell.append(
       sourceSelectElement(entry),
       smallButton("⧉", "ამ კოდის კიდევ ერთი სტრიქონი (მაგ. მიმდინარე საზღვარი და ძველი გეგმა ერთად)", async () => {
         const copy = createEntry(entry.cadastralCode, "plan", 1);
@@ -375,7 +379,8 @@ function render() {
         await saveEntries();
         render();
         await processWaitingEntries();
-      }),
+      }));
+    controlsCell.append(
       smallButton("✕", "სიიდან ამოღება", async () => {
         removedEntryIds.add(entry.id);
         entries = entries.filter((other) => other !== entry);
