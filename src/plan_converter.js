@@ -23,7 +23,7 @@
 //   accuracyEstimate(g)          სავარაუდო ცდომილება მეტრებში
 //   makeKML / makeShapefile / makeZip   ფაილების აწყობა (ექსთენშენი ამჟამად მხოლოდ კონტურს იყენებს)
 //
-// HTML ფაილის ვერსია: 2026-11-15, კომიტი c61a437 (ციფრები სივრცეებით, მაგ. "462 42 50"; ერთი ბადის ხაზი ერთ ღერძზე).
+// HTML ფაილის ვერსია: 2026-11-16, კომიტი bb726d8 (ფართობის შემოწმება დამრგვალების გათვალისწინებით; ერთხაზიანი ბადე მოწმდება გეგმის მასშტაბით 1:N).
 // საჭიროებს: lib/pdf.mjs და lib/pdf.worker.mjs (Mozilla pdf.js, იგივე ვერსია, რაც HTML ფაილშია ჩაშენებული).
 // მუშაობს მხოლოდ ექსთენშენის გვერდზე (viewer.html, contours.html): რასტრულ გეგმას canvas სჭირდება,
 // რომელიც background-ში (service worker) არ არსებობს.
@@ -52,6 +52,8 @@ async function loadPdfJs() {
 //     areaInPdf          გეგმაში დაწერილი ფართობი, კვ.მ (ან null)
 //     areaCalculated     კონტურიდან გამოთვლილი ფართობი, კვ.მ
 //     areaDifferencePercent   სხვაობა პროცენტებში (NaN, თუ გეგმაში ფართობი ვერ წავიკითხე)
+//     areaTolerancePercent    დასაშვები სხვაობა: 1%, ან მეტი, თუ გეგმის ფართობის დამრგვალება თავად აჭარბებს 1%-ს
+//                             (მაგ. "6 კვ.მ" = 5.5-6.5 -> 8.3%)
 //     accuracyMeters     { typical, max } - სავარაუდო ცდომილება
 //     utmZone            37 ან 38
 //     isRaster           true, თუ საზღვარი სურათიდან არის ამოღებული (ნაკლებად ზუსტი)
@@ -90,6 +92,7 @@ export async function convertPlanPdf(pdfBytes) {
       areaInPdf: geometry.meta.areaPdf ?? null,
       areaCalculated: geometry.areaCalc,
       areaDifferencePercent: geometry.diffPct,
+      areaTolerancePercent: geometry.areaTolerancePct ?? 1,
       accuracyMeters: accuracyEstimate(geometry),
       utmZone: zone,
       isRaster: !!geometry.raster,
@@ -305,8 +308,15 @@ function chainRings(painted) {
   return { rings, curved };
 }
 
+// გეგმაზე დაწერილი ფართობი + მისი სიზუსტე: "6" ნიშნავს 5.5-6.5 კვ.მ-ს (დამრგვალების ნახევარი = 0.5), "6.25" - 0.005
+function parseAreaText(raw) {
+  const t = raw.replace(/\s/g, '').replace(',', '.');
+  const decimals = (t.split('.')[1] || '').length;
+  return { value: parseFloat(t), halfUnit: 0.5 * 10 ** -decimals };
+}
+
 function legacyMeta(items) { // ძველი (2015-იანი) ფორმატი: ლეიბლი და მნიშვნელობა ერთ ხაზზე, ცალკე ელემენტებად
-  const out = { code: null, areaPdf: null };
+  const out = { code: null, areaPdf: null, areaHalfUnit: null };
   const after = (lab) => items.filter(i => i !== lab && Math.abs(i.y - lab.y) < 3 && i.x >= lab.x + lab.w - 2).sort((a, b) => a.x - b.x);
   const codeLab = items.find(i => /sakadastro\s+kodi/i.test(i.str));
   if (codeLab) {
@@ -318,7 +328,7 @@ function legacyMeta(items) { // ძველი (2015-იანი) ფორმ
   const areaLab = items.find(i => /miwis\s+nakveTis\s+farTobi/i.test(i.str));
   if (areaLab) {
     const m = after(areaLab).map(i => i.str.trim()).join(' ').match(/(\d[\d\s.,]*?)\s*kv\s*\.?\s*m/i);
-    if (m) out.areaPdf = parseFloat(m[1].replace(/\s/g, '').replace(',', '.'));
+    if (m) { const a = parseAreaText(m[1]); out.areaPdf = a.value; out.areaHalfUnit = a.halfUnit; }
   }
   return out;
 }
@@ -334,7 +344,7 @@ function parseMeta(text, items = []) {
   while ((gm = groupRe.exec(text))) { // ერთი ლეიბლის შემდეგ ერთი ან ორი ფართობი (37N/38N)
     if (/ვალდებულების\s*$/.test(text.slice(Math.max(0, gm.index - 20), gm.index))) continue; // "ვალდებულების ფართობი" გამოვტოვოთ
     let em; entryRe.lastIndex = 0;
-    while ((em = entryRe.exec(gm[1]))) areaList.push({ area: parseFloat(em[1].replace(/\s/g, '').replace(',', '.')), zone: em[2] ? +em[2] : null });
+    while ((em = entryRe.exec(gm[1]))) { const a = parseAreaText(em[1]); areaList.push({ area: a.value, halfUnit: a.halfUnit, zone: em[2] ? +em[2] : null }); }
     break; // პირველი (არა-ვალდებულების) ჯგუფი საკმარისია
   }
   // რუკის კოორდინატთა სისტემა: ცალკე სტრიქონი "კოორდინატთა სისტემა: WGS 84 / UTM zone 37N".
@@ -346,17 +356,21 @@ function parseMeta(text, items = []) {
     const zs = new Set(all.map(x => +x[1]));
     if (zs.size === 1) { zone = +all[0][1]; hemi = all[0][2]; }
   }
-  let areaPdf = null, areaZone = null;
+  let areaPdf = null, areaZone = null, areaHalfUnit = null;
   if (areaList.length) {
     const hit = (zone !== null && areaList.find(a => a.zone === zone)) || areaList[0];
-    areaPdf = hit.area; areaZone = hit.zone;
+    areaPdf = hit.area; areaZone = hit.zone; areaHalfUnit = hit.halfUnit;
   }
   let codeStr = code ? code[1] : null;
   if (!codeStr || areaPdf == null) {
     const lg = legacyMeta(items);
-    codeStr = codeStr || lg.code; if (areaPdf == null) areaPdf = lg.areaPdf;
+    codeStr = codeStr || lg.code; if (areaPdf == null) { areaPdf = lg.areaPdf; areaHalfUnit = lg.areaHalfUnit; }
   }
-  return { code: codeStr, areaPdf, areaZone, areaList, zone: zone ?? 38, hemi, zoneAssumed: zone === null };
+  // მასშტაბი "1:500" (ძველ ფორმატში ცალკე ელემენტია); გამოიყენება ერთხაზიანი ბადის შესამოწმებლად
+  const sc = text.match(/(?:^|[^\d.:])1\s*:\s*(100|200|250|500|1000|2000|2500|5000|10000)(?![\d.])/);
+  const legacyFormat = /sakadastro\s+(?:gegma|kodi)|miwis\s+nakveTis/i.test(text); // AcadNusx = ArcMap 2008-2015
+  return { code: codeStr, areaPdf, areaZone, areaHalfUnit, areaList, zone: zone ?? 38, hemi, zoneAssumed: zone === null,
+    mapScale: sc ? +sc[1] : null, legacyFormat };
 }
 
 const distToRing = (p, ring) => { // წერტილიდან რგოლის საზღვრამდე უმცირესი მანძილი
@@ -432,6 +446,38 @@ function detectZone(groups, hemi = 'N') { // რომელი ზონა(ე
 }
 
 // ---------- მთავარი გადამუშავება ----------
+// ფართობის შედარება. ზღვარი 1%, მაგრამ პატარა ნაკვეთზე გეგმის ფართობის დამრგვალება თავად აჭარბებს 1%-ს
+// (მაგ. "6 კვ.მ" = 5.5-6.5, ანუ ±8.3%). ამიტომ ზღვარი = max(1%, დამრგვალების ნახევარი / ფართობი).
+function areaCheck(meta, areaCalc, warnings, notes) {
+  if (!meta.areaPdf) return { diffPct: NaN, areaTolerancePct: 1 };
+  const diffPct = (areaCalc - meta.areaPdf) / meta.areaPdf * 100;
+  const roundingPct = (meta.areaHalfUnit ?? 0) / meta.areaPdf * 100;
+  const areaTolerancePct = Math.max(1, roundingPct);
+  if (Math.abs(diffPct) > areaTolerancePct) {
+    warnings.push(`ფართობის სხვაობა ${diffPct.toFixed(2)}% (>${areaTolerancePct > 1 ? areaTolerancePct.toFixed(1) + '%, დამრგვალების გათვალისწინებით' : '1%'}) — შედეგი ხელით გადაამოწმეთ.`);
+  } else if (Math.abs(diffPct) > 1) {
+    const h = meta.areaHalfUnit;
+    notes.push(`ფართობის სხვაობა ${diffPct.toFixed(2)}% მხოლოდ დამრგვალებაა: გეგმაში ${meta.areaPdf} კვ.მ წერია, ანუ ${+(meta.areaPdf - h).toFixed(3)}–${+(meta.areaPdf + h).toFixed(3)} კვ.მ; გამოთვლილი ${areaCalc.toFixed(2)} კვ.მ ამ ფარგლებშია.`);
+  }
+  return { diffPct, areaTolerancePct };
+}
+
+// ერთხაზიანი ბადე: ერთი ღერძის მასშტაბი მეორიდანაა აღებული. ძველ (ArcMap, AcadNusx) ფორმატში გვერდი ნომინალურ
+// მასშტაბშია დაბეჭდილი, ამიტომ თუ გამოთვლილი მასშტაბი გეგმაზე დაწერილ "1:N"-ს ემთხვევა (≤0.5%), ვარაუდი დადასტურებულია.
+// ახალ (Gnostice) ფორმატში X/Y ~1.5%-ით განსხვავდება - იქ გაფრთხილება რჩება.
+function singleGridLineCheck(meta, info, warnings, notes) {
+  const axis = info.isoAxis === 'x' ? 'X' : 'Y';
+  const measured = Math.abs(info.isoAxis === 'x' ? info.scaleY : info.scaleX); // მ / pt, ორხაზიანი ღერძიდან
+  const nominal = meta.mapScale ? meta.mapScale * 0.0254 / 72 : null;
+  const offPct = nominal ? Math.abs(measured / nominal - 1) * 100 : null;
+  if (meta.legacyFormat && offPct !== null && offPct <= 0.5) {
+    notes.push(`${axis} ღერძზე მხოლოდ ერთი ბადის ხაზია; მასშტაბი მეორე ღერძიდან არის აღებული და ემთხვევა გეგმაზე დაწერილ 1:${meta.mapScale}-ს (სხვაობა ${offPct.toFixed(2)}%).`);
+  } else {
+    warnings.push(`${axis} ღერძზე მხოლოდ ერთი ბადის ხაზია; მისი მასშტაბი მეორე ღერძიდან არის აღებული (ვარაუდი: ორივე ღერძის მასშტაბი ტოლია)` +
+      (offPct !== null ? `; გეგმაზე დაწერილ 1:${meta.mapScale}-თან სხვაობა ${offPct.toFixed(2)}%` : '') + '. ფართობის სხვაობა გადაამოწმეთ.');
+  }
+}
+
 function buildGeometry(ex) {
   const meta = parseMeta(ex.text, ex.items);
   const { fn, info } = buildTransform(ex);
@@ -468,15 +514,14 @@ function buildGeometry(ex) {
   }
   if (meta.zoneAssumed && meta.areaList && meta.areaList.length > 1) { // ორი ფართობიდან ზონას შესაბამისი
     const hit = meta.areaList.find(a => a.zone === meta.zone);
-    if (hit) { meta.areaPdf = hit.area; meta.areaZone = hit.zone; }
+    if (hit) { meta.areaPdf = hit.area; meta.areaZone = hit.zone; meta.areaHalfUnit = hit.halfUnit; }
   }
-  const diffPct = meta.areaPdf ? (areaCalc - meta.areaPdf) / meta.areaPdf * 100 : NaN;
-  if (info.isoAxis) warnings.push(`${info.isoAxis === 'x' ? 'X' : 'Y'} ღერძზე მხოლოდ ერთი ბადის ხაზია; მისი მასშტაბი მეორე ღერძიდან არის აღებული (ვარაუდი: ორივე ღერძის მასშტაბი ტოლია). ფართობის სხვაობა გადაამოწმეთ.`);
+  const { diffPct, areaTolerancePct } = areaCheck(meta, areaCalc, warnings, notes);
+  if (info.isoAxis) singleGridLineCheck(meta, info, warnings, notes);
   if (curved) warnings.push('საზღვარში მრუდი სეგმენტებია; ისინი ქორდებით არის მიახლოებული, ამიტომ სიზუსტე ვერ გარანტირდება.');
-  if (Number.isFinite(diffPct) && Math.abs(diffPct) > 1) warnings.push(`ფართობის სხვაობა ${diffPct.toFixed(2)}% (>1%) — შედეგი ხელით გადაამოწმეთ.`);
   if (!Number.isFinite(diffPct)) warnings.push('PDF-ში ფართობი ვერ წავიკითხე, ფართობით გადამოწმება ვერ მოხერხდა.');
   if (info.residX > 0.5 || info.residY > 0.5) warnings.push(`ბადის საყრდენების ნარჩენი ${Math.max(info.residX, info.residY).toFixed(2)} მ — მასშტაბი არაერთგვაროვანია.`);
-  return { meta, info, groups, areaCalc, diffPct, warnings, notes, ringCount: ringsUtm.length,
+  return { meta, info, groups, areaCalc, diffPct, areaTolerancePct, warnings, notes, ringCount: ringsUtm.length,
     vertexCount: ringsUtm.reduce((s, r) => s + r.length, 0) };
 }
 
@@ -870,9 +915,10 @@ function buildGeometryRaster(ex, ringPdf, nativePt) {
   meta.zoneCandidates = detectZone(groups, meta.hemi);
   if (meta.zoneAssumed && meta.zoneCandidates.length === 1) { meta.zone = meta.zoneCandidates[0]; meta.zoneAuto = true; }
   else if (!meta.zoneAssumed && meta.zoneCandidates.length === 1 && meta.zoneCandidates[0] !== meta.zone) { meta.zoneStated = meta.zone; meta.zone = meta.zoneCandidates[0]; meta.zoneCorrected = true; }
-  const diffPct = meta.areaPdf ? (areaCalc - meta.areaPdf) / meta.areaPdf * 100 : NaN;
+  const notes = [];
+  const { diffPct, areaTolerancePct } = areaCheck(meta, areaCalc, warnings, notes);
   if (!Number.isFinite(diffPct)) warnings.push('PDF-ში ფართობი ტექსტად არ არის (სურათშია), ამიტომ ფართობით გადამოწმება ვერ ხერხდება.');
-  return { meta, info, groups, areaCalc, diffPct, warnings, notes: [], ringCount: 1, vertexCount: outer.length, raster: true, nativePt };
+  return { meta, info, groups, areaCalc, diffPct, areaTolerancePct, warnings, notes, ringCount: 1, vertexCount: outer.length, raster: true, nativePt };
 }
 
 // სავარაუდო ცდომილება: ვექტორული PDF-ების ოფიციალურ shp-თან შედარებით (9 ნაკვეთი):
@@ -988,6 +1034,7 @@ function readGlyphLabels(ex, vx, hy) {
   };
   return { px: merge(reads.x), py: merge(reads.y), raw: reads };
 }
+
 
 // ---------- რასტრული გეგმა: გვერდის დახატვა და წითელი ხაზის მიყოლა (HTML ფაილის UI ნაწილიდან, უცვლელი) ----------
 async function rasterGeometry(page, ex) { // საზღვარი სურათშია: გვერდს ვარენდერებთ და წითელ ხაზს ვუყვებით

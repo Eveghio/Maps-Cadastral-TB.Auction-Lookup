@@ -31,7 +31,7 @@
 | `offscreen.html/js` | clipboard-ის წაკითხვა/ჩაწერა |
 | **`napr_docs.js`** | რეესტრის დოკუმენტები კოდით: სიის წაკითხვა, PDF-ის ტექსტი (საკუთარი წამკითხავი, RC4), ამონაწერის/გეგმის ამოცნობა, ქრონოლოგიური დალაგება. `findDocuments(code, "plan"\|"extract", {n})` |
 | **`viewer.html/js`** | ამონაწერი / საკადასტრო გეგმა ქრონოლოგიურად (1 = ბოლო), N-ე არჩევით; ღილაკები „კონტური → KML“ და „კონტური რუკაზე (+ სია)“ |
-| **`plan_converter.js`** | გეგმის PDF → კონტური. ნაწილი A: `convertPlanPdf(bytes)`. ნაწილი B: ბირთვი გიორგის `cadastre_pdf_to_kml.html`-იდან **უცვლელად** (HTML-ის ვერსია 2026-11-15, კომიტი c61a437: სივრციანი ციფრები, ორმხრივი დუბლიკატი) |
+| **`plan_converter.js`** | გეგმის PDF → კონტური. ნაწილი A: `convertPlanPdf(bytes)`. ნაწილი B: ბირთვი გიორგის `cadastre_pdf_to_kml.html`-იდან **უცვლელად** (HTML-ის ვერსია 2026-11-16, კომიტი bb726d8: ფართობის ზღვარი = max(1%, გეგმის ფართობის დამრგვალება), ერთხაზიანი ბადე მოწმდება გეგმის მასშტაბით 1:N; შედეგში `areaTolerancePercent` და `notes`) |
 | **`plan_contour.js`** | კოდი + გეგმის ნომერი → კონტური (`contourFromPlanNumber`, `listPlans`, `contourFromPlanGroup`) |
 | **`contours_core.js`** | კონტურის ფორმა, GeoJSON, geojson.io-ს ბმული, KML |
 | **`contours.html/js`** | კონტურების სია (ნაწ. 4) |

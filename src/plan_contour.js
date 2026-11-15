@@ -39,9 +39,11 @@ export async function contourFromPlanGroup(cadastralCode, planGroup, planNumber)
   if (converted.cadastralCode && converted.cadastralCode !== cadastralCode) {
     warnings.push(`გეგმაში სხვა კოდი წერია: ${converted.cadastralCode}.`);
   }
-  // plan_converter თავადაც აფრთხილებს 1%-ზე მეტ სხვაობაზე; აქ მხოლოდ ნიშანს ვინახავთ სიისთვის
+  // plan_converter თავადაც აფრთხილებს დასაშვებზე მეტ სხვაობაზე; აქ მხოლოდ ნიშანს ვინახავთ სიისთვის.
+  // დასაშვები = 1%, პატარა ნაკვეთზე კი გეგმის ფართობის დამრგვალების ზღვარი (areaTolerancePercent)
+  const allowedAreaDifferencePercent = Math.max(SUSPICIOUS_AREA_DIFFERENCE_PERCENT, converted.areaTolerancePercent ?? 0);
   const areaIsSuspicious = Number.isFinite(converted.areaDifferencePercent)
-    && Math.abs(converted.areaDifferencePercent) > SUSPICIOUS_AREA_DIFFERENCE_PERCENT;
+    && Math.abs(converted.areaDifferencePercent) > allowedAreaDifferencePercent;
 
   return {
     cadastralCode,
@@ -52,6 +54,7 @@ export async function contourFromPlanGroup(cadastralCode, planGroup, planNumber)
     planNumber,
     accuracyMeters: converted.accuracyMeters,
     warnings,
+    notes: converted.notes || [], // ინფორმაცია (არა გაფრთხილება), მაგ. "სხვაობა მხოლოდ დამრგვალებაა"
     // დამატებითი ინფორმაცია სიაში საჩვენებლად
     areaInPdf: converted.areaInPdf,
     areaCalculated: converted.areaCalculated,

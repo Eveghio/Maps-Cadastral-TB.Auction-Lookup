@@ -2,7 +2,7 @@
 // საკადასტრო გეგმები / ამონაწერები ქრონოლოგიურად (1 = ბოლო), PDF ჩაშენებულად, N-ე არჩევით.
 import { ABSTRACT_PAGE, TYPE_EXTRACT, TYPE_MAP, readList, fetchBytes, describeDoc, groupDocs } from "./napr_docs.js";
 import { contourFromPlanGroup } from "./plan_contour.js";
-import { buildKml, kmlFileName } from "./contours_core.js";
+import { buildKml, formatMeters, formatSquareMeters, kmlFileName } from "./contours_core.js";
 
 const params = new URLSearchParams(location.search);
 const code = (params.get("code") || "").trim();
@@ -352,12 +352,13 @@ async function contourOfShownPlan() {
 
   const lines = [];
   if (result.areaInPdf != null) {
-    lines.push(`კონტური მზად არის. ფართობი გეგმაში ${result.areaInPdf} კვ.მ, კონტურიდან ${result.areaCalculated.toFixed(1)} კვ.მ (სხვაობა ${result.areaDifferencePercent.toFixed(2)}%).`);
+    lines.push(`კონტური მზად არის. ფართობი გეგმაში ${result.areaInPdf} კვ.მ, კონტურიდან ${formatSquareMeters(result.areaCalculated)} კვ.მ (სხვაობა ${result.areaDifferencePercent.toFixed(2)}%).`);
   } else {
     lines.push("კონტური მზად არის.");
   }
-  lines.push(`სავარაუდო ცდომილება: ჩვეულებრივ ±${result.accuracyMeters.typical.toFixed(1)} მ, მაქს. ±${result.accuracyMeters.max.toFixed(1)} მ${result.isRaster ? " (საზღვარი სურათიდან არის ამოღებული)" : ""}.`);
+  lines.push(`სავარაუდო ცდომილება: ჩვეულებრივ ±${formatMeters(result.accuracyMeters.typical)} მ, მაქს. ±${formatMeters(result.accuracyMeters.max)} მ${result.isRaster ? " (საზღვარი სურათიდან არის ამოღებული)" : ""}.`);
   lines.push(...result.warnings);
+  lines.push(...(result.notes || []));
   showContourInfo(planRow, lines, result.areaIsSuspicious || !result.insideGeorgia);
   return result;
 }

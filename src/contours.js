@@ -16,7 +16,7 @@
 //   "plan"  რუკებს არ ეძებს: planNumber-ე საკადასტრო გეგმა (1 = ყველაზე ახალი)
 // ამას სტრიქონის ჩამოსაშლელი სიით ცვლი ("წყარო").
 
-import { CONTOUR_SOURCE, buildGeoJson, buildGeoJsonIoLink, buildKml, describeSource, formatDate, kmlFileName } from "./contours_core.js";
+import { CONTOUR_SOURCE, buildGeoJson, buildGeoJsonIoLink, buildKml, describeSource, formatDate, formatMeters, formatSquareMeters, kmlFileName } from "./contours_core.js";
 import { contourFromPlanNumber, listPlans } from "./plan_contour.js";
 
 const CADASTRAL_CODE_PATTERN = /\d+(?:\.\d+){2,9}[ა-ჰ]?/g; // იგივე, რაც background.js-ში
@@ -323,13 +323,14 @@ function detailsElement(entry) {
   if (contour && contour.source === CONTOUR_SOURCE.APPLICATION && contour.applicationTopic) addLine(contour.applicationTopic);
   if (contour && contour.source === CONTOUR_SOURCE.PLAN) {
     if (contour.areaInPdf != null) {
-      addLine(`ფართობი გეგმაში ${contour.areaInPdf} კვ.მ, კონტურიდან ${contour.areaCalculated.toFixed(1)} კვ.მ (სხვაობა ${contour.areaDifferencePercent.toFixed(2)}%)`,
+      addLine(`ფართობი გეგმაში ${contour.areaInPdf} კვ.მ, კონტურიდან ${formatSquareMeters(contour.areaCalculated)} კვ.მ (სხვაობა ${contour.areaDifferencePercent.toFixed(2)}%)`,
         contour.areaIsSuspicious ? "warning" : "");
     }
     if (contour.accuracyMeters) {
-      addLine(`სავარაუდო ცდომილება: ჩვეულებრივ ±${contour.accuracyMeters.typical.toFixed(1)} მ, მაქს. ±${contour.accuracyMeters.max.toFixed(1)} მ${contour.isRaster ? " (საზღვარი სურათიდან)" : ""}`);
+      addLine(`სავარაუდო ცდომილება: ჩვეულებრივ ±${formatMeters(contour.accuracyMeters.typical)} მ, მაქს. ±${formatMeters(contour.accuracyMeters.max)} მ${contour.isRaster ? " (საზღვარი სურათიდან)" : ""}`);
     }
     for (const warning of contour.warnings) addLine(warning, "warning");
+    for (const note of contour.notes || []) addLine(note);
   }
   for (const problem of entry.mapProblems || []) addLine(problem, "warning");
   return details;

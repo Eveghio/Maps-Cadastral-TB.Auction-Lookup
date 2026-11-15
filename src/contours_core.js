@@ -34,6 +34,16 @@ const COORDINATE_DECIMALS = 7;
 const twoDigits = (number) => String(number).padStart(2, "0");
 
 // მილიწამები -> "05.08.2014"
+// ფართობი კვ.მ-ში: პატარა ნაკვეთზე 2 ათწილადი (6.49 და არა 6.5 - თორემ დამრგვალების საზღვარს გადაცდენილი ჩანს)
+export function formatSquareMeters(squareMeters) {
+  return squareMeters < 100 ? squareMeters.toFixed(2) : squareMeters.toFixed(1);
+}
+
+// მანძილი მეტრებში: 1 მ-ზე ნაკლები - 2 ათწილადი (±0.05 და ±0.12 ორივე "±0.1"-ად არ უნდა ჩანდეს)
+export function formatMeters(meters) {
+  return meters < 1 ? meters.toFixed(2) : meters.toFixed(1);
+}
+
 export function formatDate(dateMs) {
   if (!dateMs) return "";
   const date = new Date(dateMs);
