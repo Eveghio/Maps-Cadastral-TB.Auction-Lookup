@@ -23,7 +23,7 @@
 //   accuracyEstimate(g)          სავარაუდო ცდომილება მეტრებში
 //   makeKML / makeShapefile / makeZip   ფაილების აწყობა (ექსთენშენი ამჟამად მხოლოდ კონტურს იყენებს)
 //
-// HTML ფაილის ვერსია: 2026-11-15 (ერთი ბადის ხაზი ერთ ღერძზე: მასშტაბი მეორე ღერძიდან).
+// HTML ფაილის ვერსია: 2026-11-15, კომიტი c61a437 (ციფრები სივრცეებით, მაგ. "462 42 50"; ერთი ბადის ხაზი ერთ ღერძზე).
 // საჭიროებს: lib/pdf.mjs და lib/pdf.worker.mjs (Mozilla pdf.js, იგივე ვერსია, რაც HTML ფაილშია ჩაშენებული).
 // მუშაობს მხოლოდ ექსთენშენის გვერდზე (viewer.html, contours.html): რასტრულ გეგმას canvas სჭირდება,
 // რომელიც background-ში (service worker) არ არსებობს.
@@ -200,7 +200,7 @@ async function extractPage(page, OPS) {
   for (const it of tc.items) {
     text += it.str + ' ';
     if (it.str.trim()) items.push({ str: it.str, x: it.transform[4], y: it.transform[5], w: it.width });
-    const t = it.str.trim();
+    const t = it.str.replace(/\s+/g, ""); // ზოგ PDF-ში ციფრებს შორის სივრცეებია: "462 42 50"
     if (!/^\d+$/.test(t)) continue;
     const [a, b, , , e, f] = it.transform;
     const n = Math.hypot(a, b) || 1;
@@ -442,9 +442,11 @@ function buildGeometry(ex) {
   const ringsUtm = [], notes = [];
   for (const r of allUtm) {
     const A = Math.abs(ringArea(r));
-    const dup = ringsUtm.some(k => Math.abs(Math.abs(ringArea(k)) - A) <= 1e-3 * A &&
-      r.every(p => distToRing(p, k) <= 0.05));
-    if (dup) notes.push('PDF-ში ერთი და იგივე საზღვარი ორჯერ იყო დახატული; დუბლიკატი გამოვრიცხე.');
+    // დუბლიკატი: ფართობი ემთხვევა და ერთ-ერთი რგოლის ყველა წვერო მეორის საზღვარზე დევს
+    // (ერთ ასლს შეიძლება დამატებითი წვერო ჰქონდეს - ვინარჩუნებთ უფრო დეტალურს)
+    const di = ringsUtm.findIndex(k => Math.abs(Math.abs(ringArea(k)) - A) <= 1e-3 * A &&
+      (r.every(p => distToRing(p, k) <= 0.05) || k.every(p => distToRing(p, r) <= 0.05)));
+    if (di >= 0) { if (r.length > ringsUtm[di].length) ringsUtm[di] = r; notes.push('PDF-ში ერთი და იგივე საზღვარი ორჯერ იყო დახატული; დუბლიკატი გამოვრიცხე.'); }
     else ringsUtm.push(r);
   }
   const order = ringsUtm.map((_, i) => i).sort((i, j) => Math.abs(ringArea(ringsUtm[j])) - Math.abs(ringArea(ringsUtm[i])));

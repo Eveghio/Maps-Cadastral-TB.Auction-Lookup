@@ -132,7 +132,7 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
 
   // 11) the user's updated HTML on the same PDFs
   if (ORIGINAL_HTML) {
-    const files = ["plan_c_2026.pdf", "plan_c_2015.pdf", "plan_hole_rc4.pdf", "plan_one_line.pdf"];
+    const files = ["plan_c_2026.pdf", "plan_c_2015.pdf", "plan_hole_rc4.pdf", "plan_one_line.pdf", "plan_2010_spaces.pdf"];
     const po = await ctx.newPage();
     await po.goto("file://" + ORIGINAL_HTML);
     await po.setInputFiles("input[type=file]", files.map((f) => path.join(FX, f)));

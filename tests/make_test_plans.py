@@ -12,7 +12,10 @@ E0, N0 = 481900.0, 4617300.0          # UTM at pdf point (100, 150)
 def to_pdf(e, n): return (100 + (e - E0) / M_PER_PT, 150 + (n - N0) / M_PER_PT)
 def area(r): return abs(sum(r[i][0]*r[(i+1)%len(r)][1]-r[(i+1)%len(r)][0]*r[i][1] for i in range(len(r)))/2)
 
-def plan(path, code, ring, date, hole=None, as_image=False, latin=False, x_lines=range(0, 5)):
+def plan(path, code, ring, date, hole=None, as_image=False, latin=False, x_lines=range(0, 5), spaced_labels=False, double_boundary=False):
+    # spaced_labels: ბადის ციფრები სივრცეებით ("481 90 0"), როგორც 2008-2015 ArcMap-ის ზოგ გეგმაში
+    # double_boundary: საზღვარი ორჯერ დახატული, მეორე ასლს ერთი დამატებითი წვერო აქვს
+    label = (lambda v: "%s %s %s" % (str(int(v))[:3], str(int(v))[3:5], str(int(v))[5:])) if spaced_labels else (lambda v: "%d" % v)
     c = canvas.Canvas(path, pagesize=(595, 842))
     c.setFont("DV", 11)
     if latin:
@@ -32,15 +35,22 @@ def plan(path, code, ring, date, hole=None, as_image=False, latin=False, x_lines
     for i in x_lines:                                      # vertical grid lines + easting labels
         x = 100 + i * 100
         c.line(x, 150, x, 650)
-        c.drawCentredString(x, 140, "%d" % (E0 + i * 100 * M_PER_PT))
+        c.drawCentredString(x, 140, label(E0 + i * 100 * M_PER_PT))
     for j in range(0, 6):                                  # horizontal grid lines + northing labels (vertical text)
         y = 150 + j * 100
         c.line(100, y, 500, y)
-        c.saveState(); c.translate(94, y); c.rotate(90); c.drawCentredString(0, 0, "%d" % (N0 + j * 100 * M_PER_PT)); c.restoreState()
+        c.saveState(); c.translate(94, y); c.rotate(90); c.drawCentredString(0, 0, label(N0 + j * 100 * M_PER_PT)); c.restoreState()
     c.setStrokeColorRGB(1, 0, 0); c.setLineWidth(1.2)
     for r in [ring] + ([hole] if hole else []):
         p = c.beginPath(); pts = [to_pdf(*q) for q in r]
         p.moveTo(*pts[0])
+        for q in pts[1:]: p.lineTo(*q)
+        p.close(); c.drawPath(p, stroke=1, fill=0)
+    if double_boundary:                                    # იგივე საზღვარი მეორედ, პირველ გვერდზე დამატებითი შუა წერტილით
+        pts = [to_pdf(*q) for q in ring]
+        mid = ((pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2)
+        pts = [pts[0], mid] + pts[1:]
+        p = c.beginPath(); p.moveTo(*pts[0])
         for q in pts[1:]: p.lineTo(*q)
         p.close(); c.drawPath(p, stroke=1, fill=0)
     c.save()
@@ -51,5 +61,6 @@ Bh = [(481980, 4617380), (482010, 4617380), (482010, 4617420), (481980, 4617420)
 plan(out + "/plan_c_2026.pdf", "01.10.14.028.016", A, "22/07/2026")
 plan(out + "/plan_c_2015.pdf", "01.10.14.028.016", B, "", latin=True)
 plan(out + "/plan_one_line.pdf", "01.10.14.028.016", A, "", latin=True, x_lines=[2])
+plan(out + "/plan_2010_spaces.pdf", "01.11.19.007.020", A, "", latin=True, spaced_labels=True, double_boundary=True)
 plan(out + "/plan_hole.pdf", "01.72.14.011.200", B, "03/02/2025", hole=Bh)
 json.dump({"A": A, "B": B, "Bh": Bh, "areaA": area(A)}, open(out + "/truth.json", "w"))
