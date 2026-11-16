@@ -149,7 +149,8 @@ let geoJsonIoTabId = null;
 // geojson.io მონაცემს (#data=...) მხოლოდ გვერდის პირველი ჩატვირთვისას კითხულობს და მერე მისამართს თავისით
 // ცვლის. ამიტომ უკვე გახსნილ ტაბში ახალი ბმულის ჩაწერა (+ reload) საიმედოდ არ მუშაობდა: ახალი კონტური
 // რუკაზე არ ჩნდებოდა. ახლა ძველ ტაბს ვხურავთ და იმავე ფანჯარაში, იმავე პოზიციაზე ვხსნით ახალს.
-async function showOnGeoJsonIo() {
+// openInNewTab = true: ძველი geojson.io ტაბი რჩება, ახალი ხდება "ჩვენი" (შემდეგ ჯერზე ის შეიცვლება)
+async function showOnGeoJsonIo(openInNewTab = false) {
   const link = await buildGeoJsonIoLink(readyContoursOf(entries));
   if (!link) {
     showMessage("კონტურები ბმულისთვის ზედმეტად დიდია. გამოიყენე „GeoJSON ფაილი“ და ფაილი geojson.io-ზე ჩააგდე.", true);
@@ -157,7 +158,7 @@ async function showOnGeoJsonIo() {
   }
   const newTabOptions = { url: link, active: true };
   if (geoJsonIoTabId === null) geoJsonIoTabId = (await chrome.storage.session.get(GEOJSON_TAB_STORAGE_KEY))[GEOJSON_TAB_STORAGE_KEY] ?? null;
-  if (geoJsonIoTabId !== null) {
+  if (geoJsonIoTabId !== null && !openInNewTab) {
     try {
       const oldTab = await chrome.tabs.get(geoJsonIoTabId);
       newTabOptions.windowId = oldTab.windowId;
@@ -407,7 +408,11 @@ function render() {
 
     const codeCell = document.createElement("td");
     codeCell.className = "code";
-    codeCell.textContent = entry.cadastralCode;
+    const grip = document.createElement("span");
+    grip.className = "grip";
+    grip.textContent = "⠿";
+    codeCell.append(grip, entry.cadastralCode);
+    if (!entries.some((other) => other.state === "working")) makeRowDraggable(row, entry);
 
     const sourceCell = document.createElement("td");
     sourceCell.className = "source";
@@ -457,13 +462,53 @@ function render() {
   byId("summary").textContent = !entries.length ? ""
     : workingCount ? `მუშავდება: დარჩა ${workingCount} / ${entries.length}`
     : `სიაში ${entries.length} სტრიქონია, მზად არის ${readyCount}` + (fromPlanCount ? ` (მათგან ${fromPlanCount} საკადასტრო გეგმიდან)` : "");
-  for (const buttonId of ["openOnMap", "downloadKml", "downloadGeoJson"]) byId(buttonId).disabled = !readyCount || workingCount > 0;
+  for (const buttonId of ["openOnMap", "openOnMapNewTab", "downloadKml", "downloadGeoJson"]) byId(buttonId).disabled = !readyCount || workingCount > 0;
   byId("clearList").disabled = !entries.length || workingCount > 0;
 }
 
 // ---------- ღილაკები ----------
 
-byId("openOnMap").onclick = showOnGeoJsonIo;
+byId("openOnMap").onclick = () => showOnGeoJsonIo(false);
+byId("openOnMapNewTab").onclick = () => showOnGeoJsonIo(true);
+
+// ---------- რიგის შეცვლა: კოდით დალაგება ან სტრიქონის გადათრევა ----------
+let sortDirection = 1; // 1 = ზრდადობით, -1 = კლებადობით (ყოველ დაჭერაზე იცვლება)
+const compareCodes = (first, second) => first.localeCompare(second, undefined, { numeric: true }); // "...007.020" < "...007.059"
+
+byId("sortByCode").onclick = async () => {
+  entries.sort((first, second) => sortDirection * compareCodes(first.cadastralCode, second.cadastralCode));
+  sortDirection = -sortDirection;
+  await saveEntries();
+  render();
+};
+
+let draggedEntryId = null;
+// სტრიქონს გადათრევის უნარი: render() ყოველ სტრიქონზე იძახებს
+function makeRowDraggable(row, entry) {
+  row.draggable = true;
+  row.addEventListener("dragstart", (event) => {
+    draggedEntryId = entry.id;
+    event.dataTransfer.effectAllowed = "move";
+    row.classList.add("dragging");
+  });
+  row.addEventListener("dragend", () => { draggedEntryId = null; render(); });
+  row.addEventListener("dragover", (event) => {
+    if (!draggedEntryId || draggedEntryId === entry.id) return;
+    event.preventDefault(); // ჩაგდების ნებართვა
+    row.classList.add("drop-before");
+  });
+  row.addEventListener("dragleave", () => row.classList.remove("drop-before"));
+  row.addEventListener("drop", async (event) => {
+    event.preventDefault();
+    const moved = entries.find((candidate) => candidate.id === draggedEntryId);
+    if (!moved || moved === entry) return;
+    entries.splice(entries.indexOf(moved), 1);
+    entries.splice(entries.indexOf(entry), 0, moved); // გადათრეული ჩადგება იმ სტრიქონის წინ, რომელზეც ჩააგდე
+    draggedEntryId = null;
+    await saveEntries();
+    render();
+  });
+}
 byId("downloadKml").onclick = () => showMessage(`ჩამოიტვირთა ${downloadKmlOf(entries)} KML ფაილი.`);
 byId("downloadGeoJson").onclick = downloadGeoJsonFile;
 byId("clearList").onclick = async () => {

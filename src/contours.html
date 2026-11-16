@@ -39,6 +39,12 @@
     .actions button.quiet { border-color: #bbb; color: #666; margin-left: auto; }
     .actions { max-width: 1100px; }
     #emptyList { padding: 14px 4px; color: #6b6257; font-size: 13px; }
+    th.sortable { cursor: pointer; user-select: none; }
+    th.sortable:hover { color: #8d5a00; }
+    tr[draggable="true"] td.code { cursor: grab; }
+    td.code .grip { color: #c4b59c; margin-right: 6px; font-weight: 400; }
+    tr.dragging { opacity: 0.4; }
+    tr.drop-before td { border-top: 2px solid #8d5a00; }
     .legend { margin-top: 16px; font-size: 12px; color: #6b6257; line-height: 1.6; max-width: 1100px; }
   </style>
 </head>
@@ -50,12 +56,13 @@
   </div>
   <div id="summary"></div>
   <table>
-    <thead><tr><th>საკადასტრო კოდი</th><th>კონტური საიდან არის</th><th>დეტალები</th><th>წყაროს შეცვლა</th></tr></thead>
+    <thead><tr><th id="sortByCode" class="sortable" title="დალაგება კოდით (ხელახლა დაჭერა = უკუღმა). ხელით: სტრიქონი გადაათრიე">საკადასტრო კოდი ⇅</th><th>კონტური საიდან არის</th><th>დეტალები</th><th>წყაროს შეცვლა</th></tr></thead>
     <tbody id="rows"></tbody>
   </table>
   <div id="emptyList" hidden>სია ცარიელია. დაამატე კოდი ზემოთ, ან გამოიყენე ბრძანება „კონტურები · რუკაზე“ / „კონტურები · KML“.</div>
   <div class="actions">
     <button id="openOnMap" class="main" disabled title="ყველა ნაპოვნი კონტური ერთად geojson.io-ს რუკაზე">რუკაზე ჩვენება (geojson.io)</button>
+    <button id="openOnMapNewTab" disabled title="სია ახალ geojson.io ტაბში: უკვე გახსნილი geojson.io ტაბი უცვლელი რჩება">ახალ ტაბში</button>
     <button id="downloadKml" disabled title="თითო კოდზე ცალკე .kml ფაილი">KML ჩამოტვირთვა</button>
     <button id="downloadGeoJson" disabled title="ყველა კონტური ერთ .geojson ფაილში (mapshaper.org-ისთვის, QGIS-ისთვის)">GeoJSON ფაილი</button>
     <button id="clearList" class="quiet" disabled title="ყველა სტრიქონის ამოღება (სია ბრაუზერის დახურვისასაც იშლება)">სიის გასუფთავება</button>
@@ -65,7 +72,8 @@
     <span class="from-map"><span class="dot"></span></span>ლურჯი: კონტური რუკიდან (maps.gov.ge ან ms.gov.ge), მიმდინარე საზღვარი.<br>
     <span class="from-plan"><span class="dot"></span></span>ნარინჯისფერი: კონტური საკადასტრო გეგმის PDF-იდან არის გამოთვლილი. მიახლოებითია და გეგმის თარიღის მდგომარეობას აჩვენებს.<br>
     <span class="from-application"><span class="dot"></span></span>მწვანე: ms.gov.ge-ს განცხადებაზე დატანილი კონტური, რომელსაც საკადასტრო კოდი არ აქვს.<br>
-    სია გროვდება: ახალი ბრძანება არსებულ სიას ამატებს. „რუკაზე ჩვენება“ მთელ სიას აჩვენებს ერთ რუკაზე.
+    სია გროვდება: ახალი ბრძანება არსებულ სიას ამატებს. „რუკაზე ჩვენება“ მთელ სიას აჩვენებს ერთ რუკაზე და ბოლოს გახსნილ geojson.io ტაბს ცვლის; „ახალ ტაბში“ ძველს უცვლელად ტოვებს.<br>
+    რიგი: სტრიქონი გადაათრიე ხელით, ან დააჭირე სვეტის სათაურს „საკადასტრო კოდი“. geojson.io-ზე კონტურები ამავე რიგით გადადის.
   </div>
   <script type="module" src="contours.js"></script>
 </body>

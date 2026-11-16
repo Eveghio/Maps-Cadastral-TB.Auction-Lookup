@@ -51,7 +51,7 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
   const errs = [];
   const watch = (p) => { p.on("pageerror", (e) => errs.push(String(e))); p.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); }); return p; };
   const settled = (p) => p.waitForFunction(() => document.querySelectorAll("#rows tr").length > 0 && !/მუშავდება/.test(document.getElementById("summary").textContent) && !document.querySelector("#rows td.working"), null, { timeout: 60000 });
-  const table = async (p) => (await p.locator("#rows tr").evaluateAll((rows) => rows.map((r) => [...r.querySelectorAll("td")].slice(0, 3).map((c) => c.innerText.replace(/\s*\n\s*/g, " / ")).join(" | "))));
+  const table = async (p) => (await p.locator("#rows tr").evaluateAll((rows) => rows.map((r) => [...r.querySelectorAll("td")].slice(0, 3).map((c) => c.innerText.replace("⠿", "").replace(/\s*\n\s*/g, " / ")).join(" | "))));
   const geoPage = () => ctx.pages().find((p) => p.url().startsWith("https://geojson.io/"));
 
   const cmds = await sw.evaluate(async () => (await chrome.commands.getAll()).map((c) => `${c.name}${c.shortcut ? "=" + c.shortcut : ""}`));
@@ -167,6 +167,24 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
   // 8f) geojson.io-ზე "Label:" ავტომატურად "კოდი" ხდება
   if (geoPage()) await geoPage().waitForFunction(() => /კოდი/.test(document.querySelector("#lb").textContent) && !document.querySelector("#pop select"), null, { timeout: 15000 }).catch(() => {});
   if (geoPage()) console.log("8f) geojson.io label:", JSON.stringify(await geoPage().locator("#lb").innerText()), "| popup closed:", (await geoPage().locator("#pop select").count()) === 0);
+
+  // 8g) რიგი: კოდით დალაგება, გადათრევა; "ახალ ტაბში" ძველ geojson.io ტაბს ტოვებს
+  await hub.fill("#codesInput", `${B} ${A}`); await hub.click("#addCodes");
+  await settled(hub); await hub.waitForTimeout(500);
+  const order = async () => (await table(hub)).map((t) => t.split(" | ")[0].trim()).join(", ");
+  console.log("8g) before:", await order());
+  await hub.click("#sortByCode"); await hub.waitForTimeout(300);
+  console.log("8g) sorted:", await order());
+  await hub.click("#sortByCode"); await hub.waitForTimeout(300);
+  console.log("8g) sorted desc:", await order());
+  await hub.locator("#rows tr").nth(3).dragTo(hub.locator("#rows tr").nth(0)); await hub.waitForTimeout(500);
+  console.log("8g) last dragged to top:", await order());
+  const tabsBefore = ctx.pages().filter((p) => p.url().startsWith("https://geojson.io/")).length;
+  await hub.click("#openOnMapNewTab"); await hub.waitForTimeout(1500);
+  const geoTabs = ctx.pages().filter((p) => p.url().startsWith("https://geojson.io/"));
+  console.log("8g) new tab: geojson tabs", tabsBefore, "->", geoTabs.length, "| newest features:", featuresText(decodeLink(geoTabs[geoTabs.length - 1].url())));
+  await hub.click("#openOnMap"); await hub.waitForTimeout(1500);
+  console.log("8g) then 'რუკაზე ჩვენება': geojson tabs", ctx.pages().filter((p) => p.url().startsWith("https://geojson.io/")).length);
 
   // 9) geojson.io in "this place ->"
   const jump = await sw.evaluate(async () => {
