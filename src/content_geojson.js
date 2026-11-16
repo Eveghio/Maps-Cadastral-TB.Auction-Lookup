@@ -1,4 +1,4 @@
-// content_geojson.js - geojson.io-ზე ms.gov.ge-ს 2024 წლის ორთოფოტოს ფენა (DEMO2, საცდელი).
+// content_geojson.js - geojson.io-ზე ms.gov.ge-ს 2024 წლის ორთოფოტოს ფენა (3.15-დან).
 //
 // geojson.io საკუთარ ფენებს (Custom raster layers) ინახავს localStorage-ში, გასაღებით "customRasterLayers",
 // და კითხულობს გვერდის ჩატვირთვისას. ეს სკრიპტი გვერდის სკრიპტებზე ადრე სრულდება (document_start):

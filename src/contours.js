@@ -150,7 +150,7 @@ let geoJsonIoTabId = null;
 // ცვლის. ამიტომ უკვე გახსნილ ტაბში ახალი ბმულის ჩაწერა (+ reload) საიმედოდ არ მუშაობდა: ახალი კონტური
 // რუკაზე არ ჩნდებოდა. ახლა ძველ ტაბს ვხურავთ და იმავე ფანჯარაში, იმავე პოზიციაზე ვხსნით ახალს.
 // openInNewTab = true: ძველი geojson.io ტაბი რჩება, ახალი ხდება "ჩვენი" (შემდეგ ჯერზე ის შეიცვლება)
-// withOrtho = true: geojson.io-ზე ms.gov.ge-ს 2024 წლის ორთოფოტოს ფენაც ჩაირთვება (DEMO2, საცდელი)
+// withOrtho = true: geojson.io-ზე ms.gov.ge-ს 2024 წლის ორთოფოტოს ფენაც ჩაირთვება (3.15-დან)
 async function showOnGeoJsonIo(openInNewTab = false, withOrtho = false) {
   const link = await buildGeoJsonIoLink(readyContoursOf(entries), withOrtho);
   if (!link) {
