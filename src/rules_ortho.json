@@ -1,0 +1,21 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "referer", "operation": "set", "value": "https://ms.gov.ge/msmap/" },
+        { "header": "origin", "operation": "set", "value": "https://ms.gov.ge" }
+      ],
+      "responseHeaders": [
+        { "header": "access-control-allow-origin", "operation": "set", "value": "*" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "|https://ms.gov.ge/gis-api/v1/tileserver/",
+      "initiatorDomains": ["geojson.io"],
+      "resourceTypes": ["xmlhttprequest", "image", "other"]
+    }
+  }
+]

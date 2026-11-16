@@ -150,8 +150,9 @@ let geoJsonIoTabId = null;
 // ცვლის. ამიტომ უკვე გახსნილ ტაბში ახალი ბმულის ჩაწერა (+ reload) საიმედოდ არ მუშაობდა: ახალი კონტური
 // რუკაზე არ ჩნდებოდა. ახლა ძველ ტაბს ვხურავთ და იმავე ფანჯარაში, იმავე პოზიციაზე ვხსნით ახალს.
 // openInNewTab = true: ძველი geojson.io ტაბი რჩება, ახალი ხდება "ჩვენი" (შემდეგ ჯერზე ის შეიცვლება)
-async function showOnGeoJsonIo(openInNewTab = false) {
-  const link = await buildGeoJsonIoLink(readyContoursOf(entries));
+// withOrtho = true: geojson.io-ზე ms.gov.ge-ს 2024 წლის ორთოფოტოს ფენაც ჩაირთვება (DEMO2, საცდელი)
+async function showOnGeoJsonIo(openInNewTab = false, withOrtho = false) {
+  const link = await buildGeoJsonIoLink(readyContoursOf(entries), withOrtho);
   if (!link) {
     showMessage("კონტურები ბმულისთვის ზედმეტად დიდია. გამოიყენე „GeoJSON ფაილი“ და ფაილი geojson.io-ზე ჩააგდე.", true);
     return;
@@ -462,7 +463,7 @@ function render() {
   byId("summary").textContent = !entries.length ? ""
     : workingCount ? `მუშავდება: დარჩა ${workingCount} / ${entries.length}`
     : `სიაში ${entries.length} სტრიქონია, მზად არის ${readyCount}` + (fromPlanCount ? ` (მათგან ${fromPlanCount} საკადასტრო გეგმიდან)` : "");
-  for (const buttonId of ["openOnMap", "openOnMapNewTab", "downloadKml", "downloadGeoJson"]) byId(buttonId).disabled = !readyCount || workingCount > 0;
+  for (const buttonId of ["openOnMap", "openOnMapNewTab", "openOnMapWithOrtho", "downloadKml", "downloadGeoJson"]) byId(buttonId).disabled = !readyCount || workingCount > 0;
   byId("clearList").disabled = !entries.length || workingCount > 0;
 }
 
@@ -470,6 +471,7 @@ function render() {
 
 byId("openOnMap").onclick = () => showOnGeoJsonIo(false);
 byId("openOnMapNewTab").onclick = () => showOnGeoJsonIo(true);
+byId("openOnMapWithOrtho").onclick = () => showOnGeoJsonIo(false, true);
 
 // ---------- რიგის შეცვლა: კოდით დალაგება ან სტრიქონის გადათრევა ----------
 let sortDirection = 1; // 1 = ზრდადობით, -1 = კლებადობით (ყოველ დაჭერაზე იცვლება)

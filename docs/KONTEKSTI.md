@@ -95,3 +95,9 @@ Chrome ბრძანებებს id-ით ალაგებს და მ
 - PDF-ის ჩვენება viewer-ის შიგნით (iframe) ავტომატურ ტესტში ვერ მოწმდება.
 - AES-ით დაშიფრული რეესტრის ფაილი არ შეგვხვედრია (`encrypted-unsupported`).
 - შესაძლო შემდეგი ნაბიჯები (არ არის მოთხოვნილი): SHP ფაილი ექსთენშენიდან (`makeShapefile` ბირთვში არის); პირადი ნომრების დაფარვა ისტორიაში.
+
+## DEMO2 (ბრენჩი `demo2-ortho`, საცდელი): ms.gov.ge-ს ორთოფოტო geojson.io-ზე
+
+- კონტურების სიაში ღილაკი „რუკაზე + ორთო 2024“: ბმულს ემატება `?napr_ortho=1`; `content_geojson.js` (document_start) geojson.io-ს localStorage-ში (`customRasterLayers`) წერს ფენას `https://ms.gov.ge/gis-api/v1/tileserver/image2024/{x}/{y}/{z}`. ჩვეულებრივი ჩვენებისას ეს ფენა იშლება.
+- ms.gov.ge ფილებს სხვა საიტს არ აძლევს, ამიტომ `rules_ortho.json` (declarativeNetRequestWithHostAccess) geojson.io-დან წასულ ფილის მოთხოვნებს Referer/Origin-ს ms.gov.ge-ზე უცვლის და პასუხს `Access-Control-Allow-Origin: *` უმატებს. შეიძლება ნებისმიერ დროს შეწყდეს.
+- maps.gov.ge-ს ორთო: `nt0.napr.gov.ge/secured/NGCache?...&l=ORTHO_GEORGIA_4&api_key=…` (გასაღებით) - DEMO2-ში არ არის.

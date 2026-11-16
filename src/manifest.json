@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "NAPR Lookup DEMO",
+  "name": "NAPR Lookup DEMO2",
   "version": "3.14",
   "description": "Cadastral codes on maps.gov.ge and ms.gov.ge maps (several at once, KML files), ms.gov.ge applications (AR… and other agencies) with KML, NAPR extracts and cadastral plans (latest or N-th, by preparation time) / document page, Tbilisi auction lots - via selection, clipboard, shortcut or popup, with history; open the place you are looking at on maps.gov.ge / ms.gov.ge / Google Maps.",
   "permissions": [
@@ -14,7 +14,8 @@
     "downloads",
     "storage",
     "alarms",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "declarativeNetRequestWithHostAccess"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -66,6 +67,15 @@
         "content_google.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://geojson.io/*"
+      ],
+      "js": [
+        "content_geojson.js"
+      ],
+      "run_at": "document_start"
     }
   ],
   "commands": {
@@ -144,5 +154,14 @@
         "default": "Alt+A"
       }
     }
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ortho_ms",
+        "enabled": true,
+        "path": "rules_ortho.json"
+      }
+    ]
   }
 }

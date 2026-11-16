@@ -140,8 +140,9 @@ async function gzipToBase64Url(text) {
 // (შემოწმდა ცოცხლად 2026-11-14). ძველი ფორმატი "#data=data:application/json,..." აღარ გამოდგება:
 // ფერის "#" ნიშანზე მონაცემი წყდება.
 // ბრუნდება null, თუ მონაცემი ბმულისთვის ზედმეტად დიდია (მაშინ GeoJSON ფაილად უნდა ჩამოიტვირთოს).
-export async function buildGeoJsonIoLink(contours) {
-  const link = GEOJSON_IO_ADDRESS + "#data=gz:" + await gzipToBase64Url(JSON.stringify(buildGeoJson(contours)));
+// withOrtho = true: ბმულში ?napr_ortho=1 (content_geojson.js geojson.io-ზე ms.gov.ge-ს ორთოფოტოს ფენას ამატებს)
+export async function buildGeoJsonIoLink(contours, withOrtho = false) {
+  const link = GEOJSON_IO_ADDRESS + (withOrtho ? "?napr_ortho=1" : "") + "#data=gz:" + await gzipToBase64Url(JSON.stringify(buildGeoJson(contours)));
   return link.length <= GEOJSON_IO_MAX_LINK_LENGTH ? link : null;
 }
 

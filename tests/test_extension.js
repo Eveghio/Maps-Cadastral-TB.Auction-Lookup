@@ -37,6 +37,13 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
       { appId: "AR777", type: "სატესტო თემა", geometry: WKT_A, appUrl: "", objectid: 2 }] }) });
     r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ naprSearchResult: code === B || code === H ? { cadCode: code, wktShape: WKT_B } : { cadCode: null, wktShape: null } }) });
   });
+  // (ეს route ზოგად ms.gov.ge-ს route-ზე გვიან რეგისტრირდება, რომ მას გადაფაროს)
+  const orthoTileRequests = []; // DEMO2: რა თავსართებით მივიდა ორთოფოტოს ფილის მოთხოვნა
+  await ctx.route("https://ms.gov.ge/gis-api/v1/tileserver/**", (r) => {
+    const h = r.request().headers();
+    orthoTileRequests.push(`referer=${h.referer || "-"} origin=${h.origin || "-"}`);
+    r.fulfill({ status: 200, contentType: "image/png", body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64") });
+  });
   // geojson.io-ს იმიტაცია: ღილაკი "Label:", რომელიც (დაგვიანებით) ხსნის ფანჯარას <select>-ით, როგორც ნამდვილ საიტზე
   const GEOJSON_IO_MOCK = `<html><title>geojson.io mock</title><body><button id="lb">Label: </button><div id="pop"></div><script>
     let label = "", open = false;
@@ -185,6 +192,16 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
   console.log("8g) new tab: geojson tabs", tabsBefore, "->", geoTabs.length, "| newest features:", featuresText(decodeLink(geoTabs[geoTabs.length - 1].url())));
   await hub.click("#openOnMap"); await hub.waitForTimeout(1500);
   console.log("8g) then 'რუკაზე ჩვენება': geojson tabs", ctx.pages().filter((p) => p.url().startsWith("https://geojson.io/")).length);
+
+  // 8h) DEMO2: "რუკაზე + ორთო 2024" -> geojson.io-ს localStorage-ში ფენა; ჩვეულებრივი ჩვენება მას შლის
+  console.log("8h) DNR rulesets:", JSON.stringify(await sw.evaluate(() => chrome.declarativeNetRequest.getEnabledRulesets())));
+  await hub.click("#openOnMapWithOrtho"); await hub.waitForTimeout(2000);
+  const orthoLayers = async () => geoPage().evaluate(() => (JSON.parse(localStorage.getItem("customRasterLayers") || "[]")).map((l) => l.name + " " + l.tileUrl).join(" ; "));
+  console.log("8h) ortho link:", geoPage().url().split("#")[0], "| layers:", await orthoLayers());
+  const fetchResult = await geoPage().evaluate(() => fetch("https://ms.gov.ge/gis-api/v1/tileserver/image2024/81841/48798/17").then((r) => "ok " + r.status, (e) => "FAIL " + e.message));
+  console.log("8h) tile fetch from geojson.io:", fetchResult, "| server saw:", orthoTileRequests.slice(-1)[0] || "nothing");
+  await hub.click("#openOnMap"); await hub.waitForTimeout(2000);
+  console.log("8h) plain link:", geoPage().url().split("#")[0], "| layers:", JSON.stringify(await orthoLayers()));
 
   // 9) geojson.io in "this place ->"
   const jump = await sw.evaluate(async () => {
