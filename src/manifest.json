@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NAPR Lookup DEMO",
-  "version": "3.15",
+  "version": "3.16",
   "description": "Cadastral codes on maps.gov.ge and ms.gov.ge maps (several at once, KML files), ms.gov.ge applications (AR… and other agencies) with KML, NAPR extracts and cadastral plans (latest or N-th, by preparation time) / document page, Tbilisi auction lots - via selection, clipboard, shortcut or popup, with history; open the place you are looking at on maps.gov.ge / ms.gov.ge / Google Maps.",
   "permissions": [
     "contextMenus",
@@ -113,13 +113,13 @@
       "description": "2.5 ms.gov.ge · განცხადების KML"
     },
     "3010-registry-extract": {
-      "description": "3.1 რეესტრი · ამონაწერი (ბოლო; ხელახლა = წინა)",
+      "description": "3.1 რეესტრი · ამონაწერი (ბოლო; ღია გვერდზე = ახალი კოდი აქვე)",
       "suggested_key": {
         "default": "Alt+Z"
       }
     },
     "3020-registry-plan": {
-      "description": "3.2 რეესტრი · საკადასტრო გეგმა (ბოლო; ხელახლა = წინა)"
+      "description": "3.2 რეესტრი · საკადასტრო გეგმა (ბოლო; ღია გვერდზე = ახალი კოდი აქვე)"
     },
     "3030-registry-all-documents": {
       "description": "3.3 რეესტრი · ყველა დოკუმენტის გვერდი (cad_amo)",

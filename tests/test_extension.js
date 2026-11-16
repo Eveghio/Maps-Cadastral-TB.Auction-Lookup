@@ -103,6 +103,17 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
   await viewer.click("#contourMap");
   await hub.waitForTimeout(2500);
   console.log("   after removing it and adding from viewer: rows", (await table(hub)).length, "| map features:", featuresText(decodeLink(geoPage().url())));
+  // 4b) შორთქათი ღია ამონაწერის/გეგმის გვერდზე: ახალი კოდი იმავე ტაბში იხსნება (ახალი ტაბი არ ემატება)
+  const pagesBeforeReplace = ctx.pages().length;
+  await viewer.bringToFront();
+  const replaceResult = await sw.evaluate(async ([code]) => {
+    const [viewerTab] = await chrome.tabs.query({ url: chrome.runtime.getURL("viewer.html") + "*" });
+    const sameCode = await openDocViewer(new URL(viewerTab.url).searchParams.get("code"), "plan", viewerTab); // იგივე: არაფერი იცვლება
+    await openDocViewer(code, "extract", viewerTab);
+    return { sameCode: sameCode.ok, tabId: viewerTab.id };
+  }, [C2]);
+  await viewer.waitForURL((u) => u.href.includes(encodeURIComponent(C2)) && u.href.includes("kind=extract"), { timeout: 10000 });
+  console.log("4b) viewer replaced in same tab:", viewer.url().includes(C2), "| tabs", pagesBeforeReplace, "->", ctx.pages().length, "| same code no-op ok:", replaceResult.sameCode);
   await hub.screenshot({ path: path.join(OUT, "list.png"), fullPage: true });
 
   // 5) reload the list page: the list survives

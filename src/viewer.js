@@ -18,7 +18,7 @@ const S = {
   plan: { rows: [], docs: new Map(), started: false, groups: [], sel: null, wantN: kind === "plan" ? +params.get("n") || 1 : 1, reported: false },
   extract: { rows: [], docs: new Map(), started: false, groups: [], sel: null, wantN: kind === "extract" ? +params.get("n") || 1 : 1, reported: false }
 };
-let listError = "", listLoaded = false, myTabId = null, blobUrl = "", shownRow = null;
+let listError = "", listLoaded = false, blobUrl = "", shownRow = null;
 
 const p2 = (n) => String(n).padStart(2, "0");
 const dateText = (d) => d ? `${p2(d.getDate())}.${p2(d.getMonth() + 1)}.${d.getFullYear()}` : "?";
@@ -281,15 +281,7 @@ document.addEventListener("keydown", (e) => {
   else if (e.key === "ArrowDown" || e.key === "PageDown" || e.key === "ArrowRight") { step(+1); e.preventDefault(); }
   else if (e.key === "ArrowUp" || e.key === "PageUp" || e.key === "ArrowLeft") { step(-1); e.preventDefault(); }
 });
-// შორთქათი ამ გვერდზე: იგივე ტიპი -> შემდეგი (უფრო ძველი); სხვა ტიპი -> იმ ტიპზე გადასვლა (არჩეული რჩება, თავიდან - ბოლო)
-chrome.runtime.onMessage.addListener((m) => {
-  if (!m || m.type !== "viewer-step" || m.tabId !== myTabId) return;
-  if (m.kind && m.kind !== kind) { switchKind(m.kind); return; }
-  step(+1);
-});
-
 (async () => {
-  try { const t = await chrome.tabs.getCurrent(); myTabId = t ? t.id : null; } catch (e) { /* not in a tab */ }
   $("code").textContent = code || "?";
   render();
   if (!code) return;

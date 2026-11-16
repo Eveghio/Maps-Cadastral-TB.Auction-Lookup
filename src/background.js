@@ -670,22 +670,29 @@ async function downloadMsKml(codes) {
 // orders them by preparation time (not by list order) and shows the latest; N-th via keys / repeat shortcut.
 const VIEWER_PAGE = "viewer.html";
 const viewerUrl = (code, kind, n = 1) => chrome.runtime.getURL(`${VIEWER_PAGE}?code=${encodeURIComponent(code)}&kind=${kind}&n=${n}`);
-async function openDocViewer(code, kind) {
+// tabToReplace: უკვე გახსნილი ამონაწერის/გეგმის ტაბი - ახალი კოდი იმავე ტაბში იხსნება და ძველს ანაცვლებს
+async function openDocViewer(code, kind, tabToReplace = null) {
+  if (tabToReplace) {
+    const shown = new URL(tabToReplace.url).searchParams;
+    // იგივე კოდი და იგივე ტიპი უკვე ჩანს: გვერდს არ ვტვირთავთ თავიდან (არჩეული დოკუმენტი რჩება)
+    if (shown.get("code") === code && shown.get("kind") === kind) return { ok: true };
+    await chrome.tabs.update(tabToReplace.id, { url: viewerUrl(code, kind), active: true });
+    return { ok: true };
+  }
   const tab = await chrome.tabs.create({ url: viewerUrl(code, kind), active: true });
   if (tab.windowId) await chrome.windows.update(tab.windowId, { focused: true });
   return { ok: true }; // history row is written by the viewer once it knows the result
 }
-// The active tab is a viewer -> the shortcut means "next (older)" there (or switch to the other kind)
-async function stepActiveViewer(kind) {
+// აქტიური ტაბი ჩვენი ამონაწერის/გეგმის გვერდია? (შორთქათი მაშინ ახალ კოდს იმავე ტაბში ხსნის)
+async function findActiveViewerTab() {
   try {
-    const win = await chrome.windows.getLastFocused();
-    if (!win || !win.focused) return false;
-    const [tab] = await chrome.tabs.query({ active: true, windowId: win.id });
-    if (!tab || !tab.url || !tab.url.startsWith(chrome.runtime.getURL(VIEWER_PAGE))) return false;
-    await chrome.runtime.sendMessage({ type: "viewer-step", tabId: tab.id, kind }).catch(() => {});
-    return true;
+    const focusedWindow = await chrome.windows.getLastFocused();
+    if (!focusedWindow || !focusedWindow.focused) return null;
+    const [activeTab] = await chrome.tabs.query({ active: true, windowId: focusedWindow.id });
+    if (!activeTab || !activeTab.url || !activeTab.url.startsWith(chrome.runtime.getURL(VIEWER_PAGE))) return null;
+    return activeTab;
   } catch (e) {
-    return false;
+    return null;
   }
 }
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -1012,8 +1019,19 @@ chrome.commands.onCommand.addListener(async (command) => {
   const entry = COMMAND_ACTIONS[command];
   if (!entry) return;
   const [action, newTab] = entry;
-  // on the registry viewer itself: repeat press = next (older) document
-  if ((action === "pdf" || action === "plan") && await stepActiveViewer(action === "plan" ? "plan" : "extract")) return;
+  // ამონაწერის/გეგმის გვერდზე: დაკოპირებული (ან მონიშნული) კოდი იხსნება იმავე ტაბში, ძველის ნაცვლად
+  if (action === "pdf" || action === "plan") {
+    const viewerTab = await findActiveViewerTab();
+    if (viewerTab) {
+      const code = extractValidCadastralCode(await getTextForCommand(action) || "");
+      if (!code) {
+        flashBadge("?", "#b45309");
+        return;
+      }
+      await openDocViewer(code, action === "plan" ? "plan" : "extract", viewerTab);
+      return;
+    }
+  }
   const text = await getTextForCommand(action);
   if (!text) {
     flashBadge("?", "#b45309");
