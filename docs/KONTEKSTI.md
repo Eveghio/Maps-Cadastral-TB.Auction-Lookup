@@ -1,6 +1,6 @@
 # NAPR Lookup: პროექტის კონტექსტი (ახალი ჩატისთვის)
 
-განახლდა: 2026-11-16 · მიმდინარე ვერსია: **3.17** · GitHub-ზე გამოქვეყნებული: **3.16** (3.17 მზადაა ასატვირთად; ატვირთავს გიორგი, სესიიდან Release-ის შექმნა დაბლოკილია)
+განახლდა: 2026-11-16 · მიმდინარე ვერსია: **3.17** · GitHub-ზე გამოქვეყნებული: **3.17** (Release, latest; სესიიდან API-ით დაბლოკილია - ატვირთულია გიორგის Chrome-ით)
 
 კოდი: GitHub `Eveghio/Maps-Cadastral-TB.Auction-Lookup`, საქაღალდე `src/` (main). Claude-ის skill: `napr-lookup-extension`. გამოსაშვები ZIP: `python tools/build_zip.py --release`.
 
