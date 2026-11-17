@@ -106,6 +106,24 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
   const codesInDocument = await viewer.evaluate(() => { const box = document.getElementById("docCodes"); return box.hidden ? "(დამალულია)" : box.innerText; });
   const codesFromText = await viewer.evaluate(async () => (await import("./napr_docs.js")).cadastralCodesInText("ნაკვეთის წინა ნომერი: 01.14.10.002.059; 01.14.10.002.083; 72.16.01.001 თარიღი 17.11.2026").join(","));
   console.log("4a) codes in document:", codesInDocument, "| from text:", codesFromText);
+  // 4c) PDF თავად იხატება (pdf.js): კანვასი + ტექსტის ფენა, რომელშიც კოდი ინიშნება
+  await viewer.waitForFunction(() => document.querySelector("#pages .pdf-page canvas") && document.querySelectorAll("#pages .textLayer span").length > 0, null, { timeout: 20000 });
+  const pdfLayer = await viewer.evaluate(() => ({ pages: document.querySelectorAll("#pages .pdf-page").length, iframeHidden: document.getElementById("pdf").hidden,
+    text: [...document.querySelectorAll("#pages .textLayer span")].map((span) => span.textContent).join(" ").slice(0, 4000) }));
+  const selectedCode = await viewer.evaluate(() => {
+    const span = [...document.querySelectorAll("#pages .textLayer span")].find((candidate) => /\d+\.\d+\.\d+\.\d+/.test(candidate.textContent));
+    if (!span) return "(კოდიანი span ვერ ვიპოვე)";
+    const range = document.createRange(); range.selectNodeContents(span);
+    const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range);
+    return selection.toString();
+  });
+  await viewer.keyboard.press("+"); await viewer.waitForTimeout(800);
+  const zoomedWidth = await viewer.evaluate(() => document.querySelector("#pages .pdf-page").offsetWidth);
+  await viewer.keyboard.press("0"); await viewer.waitForTimeout(800);
+  const normalWidth = await viewer.evaluate(() => document.querySelector("#pages .pdf-page").offsetWidth);
+  console.log("4c) pdf.js pages:", pdfLayer.pages, "| iframe hidden:", pdfLayer.iframeHidden, "| text has code:", pdfLayer.text.includes(C1), "| selected:", selectedCode, "| zoom +:", zoomedWidth, "> 0:", normalWidth);
+  const legacyText = await viewer.evaluate(() => "ÌÉßÉÓ (ÖÞÒÀÅÉ ØÏÍÄÁÉÓ) ÓÀÊÀÃÀÓÔÒÏ ÊÏÃÉ".replace(/[\u00C0-\u00E5]/g, (c) => "აბგდევზჱთიკლმნჲოპჟრსტჳუფქღყშჩცძწჭხჴჯჰჵ"[c.charCodeAt(0) - 0xC0]));
+  console.log("4c) legacy Georgian:", legacyText);
   const before = (await table(hub)).length;
   await viewer.click("#contourMap");
   await hub.waitForTimeout(2500);

@@ -43,6 +43,16 @@
     a.doc-code { font-family: monospace; font-size: 13px; color: var(--reg); border: 1px solid #e9c98f; background: #fffaf0; border-radius: 5px 0 0 5px; padding: 2px 7px; text-decoration: none; margin-left: 4px; }
     a.doc-code:hover { background: var(--sel); }
     button.doc-code-copy { border: 1px solid #e9c98f; border-left: none; background: #fff; color: var(--reg); border-radius: 0 5px 5px 0; padding: 2px 5px; cursor: pointer; font-size: 12px; }
+    #pages { flex: 1; overflow: auto; background: #525659; padding: 12px 0; }
+    .pdf-page { position: relative; margin: 0 auto 12px; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+    .pdf-page canvas { display: block; width: 100%; height: 100%; }
+    /* pdf.js-ის ტექსტის ფენა (pdf_viewer.css-ის მინიმალური ნაწილი): უხილავი ტექსტი, რომელიც ინიშნება და კოპირდება */
+    .textLayer { position: absolute; inset: 0; overflow: clip; line-height: 1; text-align: initial; -webkit-text-size-adjust: none; forced-color-adjust: none; transform-origin: 0 0; z-index: 0; }
+    .textLayer :is(span, br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
+    .textLayer span.markedContent { top: 0; height: 0; }
+    .textLayer ::selection { background: rgba(0, 100, 255, 0.3); }
+    .textLayer .endOfContent { display: block; position: absolute; inset: 100% 0 0; z-index: -1; cursor: default; user-select: none; }
+    .textLayer.selecting .endOfContent { top: 0; }
     iframe { flex: 1; border: none; width: 100%; background: #525659; }
     #empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; padding: 20px; text-align: center; }
     .help { color: var(--muted); font-size: 11px; margin: 14px 4px 0; line-height: 1.5; }
@@ -73,6 +83,7 @@
       <div class="help">
         <kbd>1</kbd>–<kbd>9</kbd> N-ე დოკუმენტი · <kbd>↓</kbd> უფრო ძველი · <kbd>↑</kbd> უფრო ახალი<br>
         შორთქათი ამ გვერდზე = დაკოპირებული კოდი აქვე იხსნება.<br>
+        <kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd> (ან Ctrl+ბორბალი) მასშტაბი. ტექსტი ინიშნება და კოპირდება.<br>
         1 = ქრონოლოგიურად ბოლო (მომზადების დროით, არა სიის რიგით).
       </div>
     </aside>
@@ -81,6 +92,7 @@
       <div id="docCodes" hidden></div>
       <div id="contourInfo" hidden></div>
       <div id="empty">იტვირთება…</div>
+      <div id="pages" hidden></div>
       <iframe id="pdf" hidden title="PDF"></iframe>
     </section>
   </main>

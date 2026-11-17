@@ -231,6 +231,7 @@ function showDoc(g, number = 0, count = 0) {
   showCodesOfDocument(doc);
   if (!doc || !doc.bytes) {
     frame.hidden = true; empty.hidden = false;
+    $("pages").hidden = true; pdfRenderNumber++; shownPdfBytes = null;
     empty.textContent = listError ? "" : !listLoaded || doneCount(kind) < S[kind].rows.length ? "იტვირთება…" : "აირჩიე დოკუმენტი სიიდან";
     bar.textContent = "";
     document.title = `${code} · ${KIND_NAME[kind]}`;
@@ -247,9 +248,83 @@ function showDoc(g, number = 0, count = 0) {
   shownRow = doc.row.row;
   if (blobUrl) URL.revokeObjectURL(blobUrl);
   blobUrl = URL.createObjectURL(new Blob([doc.bytes], { type: "application/pdf" }));
-  frame.src = blobUrl;
-  frame.hidden = false; empty.hidden = true;
+  empty.hidden = true;
+  frame.hidden = true;
+  frame.removeAttribute("src");
+  // PDF-ს თავად ვხატავთ (pdf.js); თუ ვერ მოხერხდა, Chrome-ის ჩაშენებული PDF-ის ჩვენება გამოიყენება
+  renderPdfInPage(doc.bytes).catch((error) => {
+    console.warn("pdf.js-ით ჩვენება ვერ მოხერხდა, Chrome-ის PDF-ზე გადავდივართ:", error);
+    $("pages").hidden = true;
+    frame.src = blobUrl;
+    frame.hidden = false;
+  });
 }
+
+// ---------- PDF-ის ჩვენება pdf.js-ით ----------
+// რატომ არა Chrome-ის PDF: რეესტრის ამონაწერები ძველი ხელსაწყოთია შექმნილი (NAPReg.exe, EMS QuickPdf 1.10, PDF-1.0):
+// ტექსტი თავდაყირა მატრიცით არის დაწერილი და Chrome-ში მონიშვნა/Ctrl+C არასანდოა; ჩაშენებული PDF ფოკუსსაც იპარავს
+// (1–9 კლავიშები დაკლიკებამდე არ მუშაობდა). აქ ტექსტი ჩვეულებრივი გვერდის ტექსტია: მონიშვნა და კოპირება სანდოა.
+let pdfJsLibrary = null, pdfRenderNumber = 0, shownPdfBytes = null, pdfZoom = 1;
+async function loadPdfJs() {
+  if (!pdfJsLibrary) {
+    pdfJsLibrary = await import("./lib/pdf.mjs");
+    pdfJsLibrary.GlobalWorkerOptions.workerSrc = new URL("./lib/pdf.worker.mjs", import.meta.url).href;
+  }
+  return pdfJsLibrary;
+}
+
+// ძველი ქართული შრიფტები (GeoTimes და მსგ.): ქართული ასოები ლათინური À–å ადგილასაა (ა = À ... ჵ = å),
+// ამიტომ კოპირებისას „ÌÉßÉÓ“ გამოდიოდა. ტექსტის ფენაში მათ ნამდვილ ქართულ ასოებად ვცვლით.
+const LEGACY_GEORGIAN_LETTERS = "აბგდევზჱთიკლმნჲოპჟრსტჳუფქღყშჩცძწჭხჴჯჰჵ";
+function legacyGeorgianToUnicode(text) {
+  return text.replace(/[\u00C0-\u00E5]/g, (character) => LEGACY_GEORGIAN_LETTERS[character.charCodeAt(0) - 0xC0]);
+}
+
+async function renderPdfInPage(bytes) {
+  const renderNumber = ++pdfRenderNumber;
+  shownPdfBytes = bytes;
+  const pdfjs = await loadPdfJs();
+  const pdfDocument = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
+  if (renderNumber !== pdfRenderNumber) return;
+  const pagesBox = $("pages");
+  pagesBox.textContent = "";
+  pagesBox.hidden = false;
+  const availableWidth = Math.max(300, pagesBox.clientWidth - 28);
+  for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
+    const page = await pdfDocument.getPage(pageNumber);
+    if (renderNumber !== pdfRenderNumber) return;
+    const fitScale = availableWidth / page.getViewport({ scale: 1 }).width;
+    const viewport = page.getViewport({ scale: Math.min(3, Math.max(0.5, fitScale * pdfZoom)) });
+    const pageBox = document.createElement("div");
+    pageBox.className = "pdf-page";
+    pageBox.style.width = `${Math.floor(viewport.width)}px`;
+    pageBox.style.height = `${Math.floor(viewport.height)}px`;
+    pageBox.style.setProperty("--scale-factor", viewport.scale);
+    const canvas = document.createElement("canvas");
+    const pixelRatio = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(viewport.width * pixelRatio);
+    canvas.height = Math.floor(viewport.height * pixelRatio);
+    const textBox = document.createElement("div");
+    textBox.className = "textLayer";
+    pageBox.append(canvas, textBox);
+    pagesBox.append(pageBox);
+    await page.render({ canvasContext: canvas.getContext("2d"), viewport, transform: pixelRatio !== 1 ? [pixelRatio, 0, 0, pixelRatio, 0, 0] : null }).promise;
+    const textContent = await page.getTextContent();
+    for (const item of textContent.items) if (item.str) item.str = legacyGeorgianToUnicode(item.str);
+    await new pdfjs.TextLayer({ textContentSource: textContent, container: textBox, viewport }).render();
+  }
+}
+
+// მასშტაბი: + / − / 0 კლავიშები, ან Ctrl+ბორბალი PDF-ზე
+function changePdfZoom(newZoom) {
+  pdfZoom = Math.min(3, Math.max(0.5, newZoom));
+  if (shownPdfBytes) renderPdfInPage(shownPdfBytes).catch(() => {});
+}
+let resizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { if (shownPdfBytes && !$("pages").hidden) renderPdfInPage(shownPdfBytes).catch(() => {}); }, 300);
+});
 
 function currentDoc() {
   const st = S[kind];
@@ -278,6 +353,9 @@ $("download").onclick = () => {
 };
 document.addEventListener("keydown", (e) => {
   if (e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.key === "+" || e.key === "=") { changePdfZoom(pdfZoom * 1.2); e.preventDefault(); return; }
+  if (e.key === "-") { changePdfZoom(pdfZoom / 1.2); e.preventDefault(); return; }
+  if (e.key === "0") { changePdfZoom(1); e.preventDefault(); return; }
   if (/^[1-9]$/.test(e.key)) { goN(kind, +e.key); e.preventDefault(); }
   else if (e.key === "ArrowDown" || e.key === "PageDown" || e.key === "ArrowRight") { step(+1); e.preventDefault(); }
   else if (e.key === "ArrowUp" || e.key === "PageUp" || e.key === "ArrowLeft") { step(-1); e.preventDefault(); }
@@ -289,6 +367,11 @@ document.addEventListener("keydown", (e) => {
 // მაუსი PDF-ზე თუ არის, ფოკუსს არ ვეხებით: იქ ტექსტის მონიშვნა და Ctrl+C უნდა მუშაობდეს.
 const ALWAYS_RETURN_FOCUS_MS = 1500, RETURN_FOCUS_IF_MOUSE_OUTSIDE_MS = 8000;
 let pdfLoadedAt = Date.now(), mouseIsOverPdf = false;
+$("pages").addEventListener("wheel", (event) => {
+  if (!event.ctrlKey) return;
+  event.preventDefault();
+  changePdfZoom(pdfZoom * (event.deltaY < 0 ? 1.1 : 1 / 1.1));
+}, { passive: false });
 $("pdf").addEventListener("mouseenter", () => { mouseIsOverPdf = true; });
 $("pdf").addEventListener("mouseleave", () => { mouseIsOverPdf = false; });
 function returnKeyboardFocusToPage() {
