@@ -40,7 +40,12 @@
     #contourInfo.problem { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
     body:focus { outline: none; }
     #docCodes { padding: 5px 12px; font-size: 12.5px; color: var(--muted); background: #fff; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-    a.doc-code { font-family: monospace; font-size: 13px; color: var(--reg); border: 1px solid #e9c98f; background: #fffaf0; border-radius: 5px 0 0 5px; padding: 2px 7px; text-decoration: none; margin-left: 4px; }
+    a.doc-code { font-family: monospace; font-size: 13px; color: var(--reg); border: 1px solid #e9c98f; background: #fffaf0; border-radius: 5px; padding: 2px 7px; text-decoration: none; margin-left: 4px; }
+    a.doc-code.with-copy { border-radius: 5px 0 0 5px; }
+    details.unit-codes { margin-left: 8px; }
+    details.unit-codes summary { cursor: pointer; color: var(--reg); }
+    details.unit-codes .unit-links { display: flex; flex-wrap: wrap; gap: 3px; max-height: 96px; overflow: auto; margin-top: 4px; }
+    details.unit-codes a.doc-code { font-size: 12px; padding: 1px 5px; margin-left: 0; }
     a.doc-code:hover { background: var(--sel); }
     button.doc-code-copy { border: 1px solid #e9c98f; border-left: none; background: #fff; color: var(--reg); border-radius: 0 5px 5px 0; padding: 2px 5px; cursor: pointer; font-size: 12px; }
     #pages { flex: 1; overflow: auto; background: #525659; padding: 12px 0; }

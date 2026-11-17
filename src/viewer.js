@@ -264,6 +264,7 @@ function showDoc(g, number = 0, count = 0) {
 // რატომ არა Chrome-ის PDF: რეესტრის ამონაწერები ძველი ხელსაწყოთია შექმნილი (NAPReg.exe, EMS QuickPdf 1.10, PDF-1.0):
 // ტექსტი თავდაყირა მატრიცით არის დაწერილი და Chrome-ში მონიშვნა/Ctrl+C არასანდოა; ჩაშენებული PDF ფოკუსსაც იპარავს
 // (1–9 კლავიშები დაკლიკებამდე არ მუშაობდა). აქ ტექსტი ჩვეულებრივი გვერდის ტექსტია: მონიშვნა და კოპირება სანდოა.
+const PDF_SCALE_AT_100_PERCENT = 96 / 72;
 let pdfJsLibrary = null, pdfRenderNumber = 0, shownPdfBytes = null, pdfZoom = 1;
 async function loadPdfJs() {
   if (!pdfJsLibrary) {
@@ -289,12 +290,11 @@ async function renderPdfInPage(bytes) {
   const pagesBox = $("pages");
   pagesBox.textContent = "";
   pagesBox.hidden = false;
-  const availableWidth = Math.max(300, pagesBox.clientWidth - 28);
   for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
     const page = await pdfDocument.getPage(pageNumber);
     if (renderNumber !== pdfRenderNumber) return;
-    const fitScale = availableWidth / page.getViewport({ scale: 1 }).width;
-    const viewport = page.getViewport({ scale: Math.min(3, Math.max(0.5, fitScale * pdfZoom)) });
+    // 100% = Chrome-ის PDF-ის 100% (1 pt = 96/72 px), შემდეგ მომხმარებლის მასშტაბი
+    const viewport = page.getViewport({ scale: PDF_SCALE_AT_100_PERCENT * pdfZoom });
     const pageBox = document.createElement("div");
     pageBox.className = "pdf-page";
     pageBox.style.width = `${Math.floor(viewport.width)}px`;
@@ -317,14 +317,9 @@ async function renderPdfInPage(bytes) {
 
 // მასშტაბი: + / − / 0 კლავიშები, ან Ctrl+ბორბალი PDF-ზე
 function changePdfZoom(newZoom) {
-  pdfZoom = Math.min(3, Math.max(0.5, newZoom));
+  pdfZoom = Math.min(4, Math.max(0.3, newZoom));
   if (shownPdfBytes) renderPdfInPage(shownPdfBytes).catch(() => {});
 }
-let resizeTimer = null;
-window.addEventListener("resize", () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { if (shownPdfBytes && !$("pages").hidden) renderPdfInPage(shownPdfBytes).catch(() => {}); }, 300);
-});
 
 function currentDoc() {
   const st = S[kind];
@@ -395,23 +390,49 @@ function showCodesOfDocument(doc) {
   box.textContent = "";
   box.hidden = !otherCodes.length;
   if (!otherCodes.length) return;
-  box.append(kind === "extract" ? "კოდები ამონაწერში: " : "კოდები დოკუმენტში: ");
-  for (const otherCode of otherCodes) {
-    const link = document.createElement("a");
-    link.className = "doc-code";
-    link.textContent = otherCode;
-    link.href = `viewer.html?code=${encodeURIComponent(otherCode)}&kind=${kind}&n=1`;
-    link.title = `${KIND_NAME[kind]} ${otherCode}-ზე: აქვე გადასვლა (Ctrl+დაკლიკება = ახალ ტაბში)`;
-    const copyButton = document.createElement("button");
-    copyButton.className = "doc-code-copy";
-    copyButton.textContent = "⧉";
-    copyButton.title = "კოდის კოპირება";
-    copyButton.onclick = async () => {
-      try { await navigator.clipboard.writeText(otherCode); flash(`დაკოპირდა: ${otherCode}`); }
-      catch (error) { flash("კოპირება ვერ მოხერხდა"); }
-    };
-    box.append(link, copyButton);
+  // მრავალბინიანის ამონაწერში ათობით ბინის კოდია (<კოდი>.01.001 ...): ისინი ცალკე, დაკეცილ სიაში
+  const unitCodes = otherCodes.filter((candidate) => candidate.startsWith(code + "."));
+  const mainCodes = otherCodes.filter((candidate) => !unitCodes.includes(candidate));
+  if (mainCodes.length) {
+    box.append(kind === "extract" ? "კოდები ამონაწერში: " : "კოდები დოკუმენტში: ");
+    for (const otherCode of mainCodes) box.append(...codeLinkWithCopyButton(otherCode));
   }
+  if (unitCodes.length) {
+    const unitList = document.createElement("details");
+    unitList.className = "unit-codes";
+    const summary = document.createElement("summary");
+    summary.textContent = `ერთეულები (ბინები და სხვ.): ${unitCodes.length}`;
+    const unitLinks = document.createElement("div");
+    unitLinks.className = "unit-links";
+    for (const unitCode of unitCodes) {
+      const link = codeLink(unitCode);
+      link.textContent = unitCode.slice(code.length); // მხოლოდ დაბოლოება, მაგ. „.01.001“ - კომპაქტურად
+      unitLinks.append(link);
+    }
+    unitList.append(summary, unitLinks);
+    box.append(unitList);
+  }
+}
+function codeLink(otherCode) {
+  const link = document.createElement("a");
+  link.className = "doc-code";
+  link.textContent = otherCode;
+  link.href = `viewer.html?code=${encodeURIComponent(otherCode)}&kind=${kind}&n=1`;
+  link.title = `${KIND_NAME[kind]} ${otherCode}-ზე: აქვე გადასვლა (Ctrl+დაკლიკება = ახალ ტაბში)`;
+  return link;
+}
+function codeLinkWithCopyButton(otherCode) {
+  const link = codeLink(otherCode);
+  link.classList.add("with-copy");
+  const copyButton = document.createElement("button");
+  copyButton.className = "doc-code-copy";
+  copyButton.textContent = "⧉";
+  copyButton.title = "კოდის კოპირება";
+  copyButton.onclick = async () => {
+    try { await navigator.clipboard.writeText(otherCode); flash(`დაკოპირდა: ${otherCode}`); }
+    catch (error) { flash("კოპირება ვერ მოხერხდა"); }
+  };
+  return [link, copyButton];
 }
 
 (async () => {

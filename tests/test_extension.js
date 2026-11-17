@@ -124,6 +124,8 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
   console.log("4c) pdf.js pages:", pdfLayer.pages, "| iframe hidden:", pdfLayer.iframeHidden, "| text has code:", pdfLayer.text.includes(C1), "| selected:", selectedCode, "| zoom +:", zoomedWidth, "> 0:", normalWidth);
   const legacyText = await viewer.evaluate(() => "ÌÉßÉÓ (ÖÞÒÀÅÉ ØÏÍÄÁÉÓ) ÓÀÊÀÃÀÓÔÒÏ ÊÏÃÉ".replace(/[\u00C0-\u00E5]/g, (c) => "აბგდევზჱთიკლმნჲოპჟრსტჳუფქღყშჩცძწჭხჴჯჰჵ"[c.charCodeAt(0) - 0xC0]));
   console.log("4c) legacy Georgian:", legacyText);
+  const pageWidthAt100 = await viewer.evaluate(() => document.querySelector("#pages .pdf-page").offsetWidth);
+  console.log("4c) page width at 100% (A4 = 793px expected for 595pt):", pageWidthAt100);
   const before = (await table(hub)).length;
   await viewer.click("#contourMap");
   await hub.waitForTimeout(2500);
