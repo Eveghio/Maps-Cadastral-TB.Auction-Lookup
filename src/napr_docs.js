@@ -378,14 +378,20 @@ function classifyMap(flat) {
   return { kind, stamp: stamps[0] || "", confirmed: kind === "cadastral-plan" && /საჯარორეესტრისეროვნულისააგენტო|reestriserovnulisaagento/.test(flat) };
 }
 
+// დოკუმენტში ჩაწერილი საკადასტრო კოდები (მაგ. ამონაწერში „წინა კოდები“), რიგით, გამეორების გარეშე
+export function cadastralCodesInText(text) {
+  const pattern = new RegExp(CADASTRAL_CODE_RE.source, "g");
+  return [...new Set((text || "").match(pattern) || [])].filter((candidate) => candidate.split(".").length >= 4);
+}
+
 // row: parseAbstractPage-ის სტრიქონი (type, regNo). ბრუნდება:
-// { kind, stamp, confirmed, appNo, appTime, prepared, preparedHasTime, created, signed, encrypted, unsupported, readable }
+// { kind, stamp, confirmed, codes, appNo, appTime, prepared, preparedHasTime, created, signed, encrypted, unsupported, readable }
 //   kind: "extract" | "cadastral-plan" | "situational-drawing" | "measurement-drawing" | "unknown" | "encrypted-unsupported"
 export async function describeDoc(bytes, row = {}) {
   const p = await pdfText(bytes);
   const flat = p.text.replace(/\s+/g, "");
   const base = { signed: p.signed, encrypted: p.encrypted, unsupported: p.unsupported, created: p.created, readable: flat.length > 20,
-    stamp: "", confirmed: false, appNo: "", appTime: null, prepared: null, preparedHasTime: false };
+    stamp: "", confirmed: false, appNo: "", appTime: null, prepared: null, preparedHasTime: false, codes: cadastralCodesInText(p.text) };
   if (p.unsupported) return { ...base, kind: "encrypted-unsupported" };
   const known = row.regNo && flat.includes(row.regNo) ? row.regNo : "";
   if (row.type === TYPE_EXTRACT) {

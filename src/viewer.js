@@ -228,6 +228,7 @@ function showDoc(g, number = 0, count = 0) {
   const doc = g ? S[kind].docs.get(g.best.row) : null;
   $("openTab").disabled = $("download").disabled = !doc || !doc.bytes;
   updateContourButtons(doc);
+  showCodesOfDocument(doc);
   if (!doc || !doc.bytes) {
     frame.hidden = true; empty.hidden = false;
     empty.textContent = listError ? "" : !listLoaded || doneCount(kind) < S[kind].rows.length ? "იტვირთება…" : "აირჩიე დოკუმენტი სიიდან";
@@ -282,21 +283,53 @@ document.addEventListener("keydown", (e) => {
   else if (e.key === "ArrowUp" || e.key === "PageUp" || e.key === "ArrowLeft") { step(-1); e.preventDefault(); }
 });
 // Chrome-ის PDF-ის ჩვენება ჩატვირთვისას კლავიატურის ფოკუსს თავისკენ იღებს და მაშინ 1–9 / ↑↓ აღარ მუშაობს,
-// სანამ გვერდზე არ დააკლიკებ. ამიტომ PDF-ის ჩატვირთვიდან მცირე ხნის განმავლობაში ფოკუსს გვერდს ვუბრუნებთ.
-// ამ დროის მერე PDF-ზე დაკლიკება ჩვეულებრივ მუშაობს (მაგ. ტექსტის მოსანიშნად ან გადასახვევად).
-const FOCUS_RETURN_PERIOD_MS = 2500;
-let pdfLoadedAt = Date.now();
+// სანამ გვერდზე არ დააკლიკებ. ამიტომ ფოკუსს გვერდს ვუბრუნებთ:
+//  - PDF-ის ჩატვირთვიდან პირველ 1.5 წამში ყოველთვის;
+//  - 8 წამამდე, თუ მაუსი PDF-ის ზემოთ არ არის (ე.ი. PDF-ზე არ დაგიკლიკებია - ფოკუსი თავად წაიღო).
+// მაუსი PDF-ზე თუ არის, ფოკუსს არ ვეხებით: იქ ტექსტის მონიშვნა და Ctrl+C უნდა მუშაობდეს.
+const ALWAYS_RETURN_FOCUS_MS = 1500, RETURN_FOCUS_IF_MOUSE_OUTSIDE_MS = 8000;
+let pdfLoadedAt = Date.now(), mouseIsOverPdf = false;
+$("pdf").addEventListener("mouseenter", () => { mouseIsOverPdf = true; });
+$("pdf").addEventListener("mouseleave", () => { mouseIsOverPdf = false; });
 function returnKeyboardFocusToPage() {
-  if (Date.now() - pdfLoadedAt > FOCUS_RETURN_PERIOD_MS) return;
+  const sinceLoad = Date.now() - pdfLoadedAt;
+  if (sinceLoad > RETURN_FOCUS_IF_MOUSE_OUTSIDE_MS) return;
+  if (sinceLoad > ALWAYS_RETURN_FOCUS_MS && mouseIsOverPdf) return;
   if (document.activeElement !== $("pdf") && document.hasFocus()) return;
   document.body.focus({ preventScroll: true });
 }
 $("pdf").addEventListener("load", () => {
   pdfLoadedAt = Date.now();
-  for (const delay of [0, 150, 400, 1000, 2000]) setTimeout(returnKeyboardFocusToPage, delay);
+  for (const delay of [0, 150, 400, 1000, 2000, 3500, 5500, 7500]) setTimeout(returnKeyboardFocusToPage, delay);
 });
 window.addEventListener("blur", () => setTimeout(returnKeyboardFocusToPage, 0));
 document.body.focus({ preventScroll: true });
+
+// ---------- დოკუმენტში ჩაწერილი კოდები (მაგ. „ნაკვეთის წინა ნომერი“): დაკლიკებით იმავე ტაბში იხსნება ----------
+function showCodesOfDocument(doc) {
+  const box = $("docCodes");
+  const otherCodes = doc && doc.info && Array.isArray(doc.info.codes) ? doc.info.codes.filter((candidate) => candidate !== code) : [];
+  box.textContent = "";
+  box.hidden = !otherCodes.length;
+  if (!otherCodes.length) return;
+  box.append(kind === "extract" ? "კოდები ამონაწერში: " : "კოდები დოკუმენტში: ");
+  for (const otherCode of otherCodes) {
+    const link = document.createElement("a");
+    link.className = "doc-code";
+    link.textContent = otherCode;
+    link.href = `viewer.html?code=${encodeURIComponent(otherCode)}&kind=${kind}&n=1`;
+    link.title = `${KIND_NAME[kind]} ${otherCode}-ზე: აქვე გადასვლა (Ctrl+დაკლიკება = ახალ ტაბში)`;
+    const copyButton = document.createElement("button");
+    copyButton.className = "doc-code-copy";
+    copyButton.textContent = "⧉";
+    copyButton.title = "კოდის კოპირება";
+    copyButton.onclick = async () => {
+      try { await navigator.clipboard.writeText(otherCode); flash(`დაკოპირდა: ${otherCode}`); }
+      catch (error) { flash("კოპირება ვერ მოხერხდა"); }
+    };
+    box.append(link, copyButton);
+  }
+}
 
 (async () => {
   $("code").textContent = code || "?";

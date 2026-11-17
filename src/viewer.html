@@ -39,6 +39,10 @@
     #contourInfo { padding: 6px 12px; font-size: 12.5px; background: #fff7ed; border-bottom: 1px solid #fed7aa; color: #7c2d12; line-height: 1.45; }
     #contourInfo.problem { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
     body:focus { outline: none; }
+    #docCodes { padding: 5px 12px; font-size: 12.5px; color: var(--muted); background: #fff; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+    a.doc-code { font-family: monospace; font-size: 13px; color: var(--reg); border: 1px solid #e9c98f; background: #fffaf0; border-radius: 5px 0 0 5px; padding: 2px 7px; text-decoration: none; margin-left: 4px; }
+    a.doc-code:hover { background: var(--sel); }
+    button.doc-code-copy { border: 1px solid #e9c98f; border-left: none; background: #fff; color: var(--reg); border-radius: 0 5px 5px 0; padding: 2px 5px; cursor: pointer; font-size: 12px; }
     iframe { flex: 1; border: none; width: 100%; background: #525659; }
     #empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; padding: 20px; text-align: center; }
     .help { color: var(--muted); font-size: 11px; margin: 14px 4px 0; line-height: 1.5; }
@@ -74,6 +78,7 @@
     </aside>
     <section id="viewer">
       <div id="docbar"></div>
+      <div id="docCodes" hidden></div>
       <div id="contourInfo" hidden></div>
       <div id="empty">იტვირთება…</div>
       <iframe id="pdf" hidden title="PDF"></iframe>

@@ -103,6 +103,9 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
   await viewer.keyboard.press("1");
   await viewer.waitForFunction(() => /საკადასტრო გეგმა 1 \//.test(document.getElementById("docbar").textContent), null, { timeout: 5000 });
   console.log("4a) viewer focus after load:", focusedAfterLoad, "| key 2 without click:", keyTwoWorked);
+  const codesInDocument = await viewer.evaluate(() => { const box = document.getElementById("docCodes"); return box.hidden ? "(დამალულია)" : box.innerText; });
+  const codesFromText = await viewer.evaluate(async () => (await import("./napr_docs.js")).cadastralCodesInText("ნაკვეთის წინა ნომერი: 01.14.10.002.059; 01.14.10.002.083; 72.16.01.001 თარიღი 17.11.2026").join(","));
+  console.log("4a) codes in document:", codesInDocument, "| from text:", codesFromText);
   const before = (await table(hub)).length;
   await viewer.click("#contourMap");
   await hub.waitForTimeout(2500);
