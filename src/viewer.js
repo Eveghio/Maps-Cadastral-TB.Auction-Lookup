@@ -281,6 +281,23 @@ document.addEventListener("keydown", (e) => {
   else if (e.key === "ArrowDown" || e.key === "PageDown" || e.key === "ArrowRight") { step(+1); e.preventDefault(); }
   else if (e.key === "ArrowUp" || e.key === "PageUp" || e.key === "ArrowLeft") { step(-1); e.preventDefault(); }
 });
+// Chrome-ის PDF-ის ჩვენება ჩატვირთვისას კლავიატურის ფოკუსს თავისკენ იღებს და მაშინ 1–9 / ↑↓ აღარ მუშაობს,
+// სანამ გვერდზე არ დააკლიკებ. ამიტომ PDF-ის ჩატვირთვიდან მცირე ხნის განმავლობაში ფოკუსს გვერდს ვუბრუნებთ.
+// ამ დროის მერე PDF-ზე დაკლიკება ჩვეულებრივ მუშაობს (მაგ. ტექსტის მოსანიშნად ან გადასახვევად).
+const FOCUS_RETURN_PERIOD_MS = 2500;
+let pdfLoadedAt = Date.now();
+function returnKeyboardFocusToPage() {
+  if (Date.now() - pdfLoadedAt > FOCUS_RETURN_PERIOD_MS) return;
+  if (document.activeElement !== $("pdf") && document.hasFocus()) return;
+  document.body.focus({ preventScroll: true });
+}
+$("pdf").addEventListener("load", () => {
+  pdfLoadedAt = Date.now();
+  for (const delay of [0, 150, 400, 1000, 2000]) setTimeout(returnKeyboardFocusToPage, delay);
+});
+window.addEventListener("blur", () => setTimeout(returnKeyboardFocusToPage, 0));
+document.body.focus({ preventScroll: true });
+
 (async () => {
   $("code").textContent = code || "?";
   render();

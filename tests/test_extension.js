@@ -95,6 +95,14 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
   const viewer = watch(await ctx.newPage());
   await viewer.goto(`chrome-extension://${id}/viewer.html?code=${C1}&kind=plan&n=1`);
   await viewer.waitForFunction(() => /საკადასტრო გეგმა 1 \//.test(document.getElementById("docbar").textContent), null, { timeout: 15000 });
+  // 4a) 1–9 კლავიშები გვერდზე დაკლიკების გარეშე უნდა მუშაობდეს (ფოკუსი PDF-ში არ რჩება)
+  await viewer.waitForTimeout(800);
+  const focusedAfterLoad = await viewer.evaluate(() => document.activeElement && document.activeElement.tagName);
+  await viewer.keyboard.press("2");
+  const keyTwoWorked = await viewer.waitForFunction(() => /საკადასტრო გეგმა 2 \//.test(document.getElementById("docbar").textContent), null, { timeout: 5000 }).then(() => true, () => false);
+  await viewer.keyboard.press("1");
+  await viewer.waitForFunction(() => /საკადასტრო გეგმა 1 \//.test(document.getElementById("docbar").textContent), null, { timeout: 5000 });
+  console.log("4a) viewer focus after load:", focusedAfterLoad, "| key 2 without click:", keyTwoWorked);
   const before = (await table(hub)).length;
   await viewer.click("#contourMap");
   await hub.waitForTimeout(2500);
@@ -195,8 +203,15 @@ const featuresText = (fc) => fc.features.map((f) => `${f.properties["კოდ�
   console.log("8g) sorted:", await order());
   await hub.click("#sortByCode"); await hub.waitForTimeout(300);
   console.log("8g) sorted desc:", await order());
-  await hub.locator("#rows tr").nth(3).dragTo(hub.locator("#rows tr").nth(0)); await hub.waitForTimeout(500);
-  console.log("8g) last dragged to top:", await order());
+  // სტრიქონის ტექსტიდან გადათრევა არ უნდა მოხდეს (ტექსტი ინიშნება), მხოლოდ ⠿-ით
+  await hub.locator("#rows tr").nth(3).locator(".code-text").dragTo(hub.locator("#rows tr").nth(0)); await hub.waitForTimeout(500);
+  console.log("8g) drag by text (must not move):", await order());
+  await hub.locator("#rows tr").nth(3).locator(".grip").dragTo(hub.locator("#rows tr").nth(0)); await hub.waitForTimeout(500);
+  console.log("8g) last dragged to top by ⠿:", await order());
+  await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: `chrome-extension://${id}` }).catch(() => {});
+  const firstCode = (await order()).split(", ")[0];
+  await hub.locator("#rows tr").nth(0).locator(".code-text").click(); await hub.waitForTimeout(300);
+  console.log("8g) click code -> message:", await hub.locator("#message").innerText(), "| clipboard same:", (await hub.evaluate(() => navigator.clipboard.readText()).catch((e) => "ERR " + e.message)) === firstCode);
   const tabsBefore = ctx.pages().filter((p) => p.url().startsWith("https://geojson.io/")).length;
   await hub.click("#openOnMapNewTab"); await hub.waitForTimeout(1500);
   const geoTabs = ctx.pages().filter((p) => p.url().startsWith("https://geojson.io/"));

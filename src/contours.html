@@ -41,8 +41,9 @@
     #emptyList { padding: 14px 4px; color: #6b6257; font-size: 13px; }
     th.sortable { cursor: pointer; user-select: none; }
     th.sortable:hover { color: #8d5a00; }
-    tr[draggable="true"] td.code { cursor: grab; }
-    td.code .grip { color: #c4b59c; margin-right: 6px; font-weight: 400; }
+    td.code .grip { color: #c4b59c; margin-right: 6px; font-weight: 400; cursor: grab; }
+    td.code .code-text[title] { cursor: copy; }
+    td.code .code-text[title]:hover { text-decoration: underline dotted; }
     tr.dragging { opacity: 0.4; }
     tr.drop-before td { border-top: 2px solid #8d5a00; }
     .legend { margin-top: 16px; font-size: 12px; color: #6b6257; line-height: 1.6; max-width: 1100px; }

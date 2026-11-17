@@ -412,8 +412,15 @@ function render() {
     const grip = document.createElement("span");
     grip.className = "grip";
     grip.textContent = "⠿";
-    codeCell.append(grip, entry.cadastralCode);
-    if (!entries.some((other) => other.state === "working")) makeRowDraggable(row, entry);
+    const codeText = document.createElement("span");
+    codeText.className = "code-text";
+    codeText.textContent = entry.cadastralCode;
+    if (entry.cadastralCode) {
+      codeText.title = "დააკლიკე - კოდი დაკოპირდება";
+      codeText.onclick = () => copyCodeToClipboard(entry.cadastralCode);
+    }
+    codeCell.append(grip, codeText);
+    if (!entries.some((other) => other.state === "working")) makeRowDraggable(row, entry, grip);
 
     const sourceCell = document.createElement("td");
     sourceCell.className = "source";
@@ -486,14 +493,26 @@ byId("sortByCode").onclick = async () => {
 
 let draggedEntryId = null;
 // სტრიქონს გადათრევის უნარი: render() ყოველ სტრიქონზე იძახებს
-function makeRowDraggable(row, entry) {
-  row.draggable = true;
+// კოდზე დაკლიკება: კოდი ბუფერში კოპირდება (ტექსტის მონიშვნაც მუშაობს, რადგან სტრიქონი მხოლოდ ⠿-ით გადაითრევა)
+async function copyCodeToClipboard(cadastralCode) {
+  try {
+    await navigator.clipboard.writeText(cadastralCode);
+    showMessage(`დაკოპირდა: ${cadastralCode}`);
+  } catch (error) {
+    showMessage("კოპირება ვერ მოხერხდა: " + (error && error.message || error), true);
+  }
+}
+
+// სტრიქონი გადაითრევა მხოლოდ ⠿-ით: დანარჩენ ადგილას ტექსტი ჩვეულებრივ ინიშნება და კოპირდება
+function makeRowDraggable(row, entry, dragHandle) {
+  dragHandle.addEventListener("mousedown", () => { row.draggable = true; });
+  dragHandle.addEventListener("mouseup", () => { row.draggable = false; });
   row.addEventListener("dragstart", (event) => {
     draggedEntryId = entry.id;
     event.dataTransfer.effectAllowed = "move";
     row.classList.add("dragging");
   });
-  row.addEventListener("dragend", () => { draggedEntryId = null; render(); });
+  row.addEventListener("dragend", () => { draggedEntryId = null; row.draggable = false; render(); });
   row.addEventListener("dragover", (event) => {
     if (!draggedEntryId || draggedEntryId === entry.id) return;
     event.preventDefault(); // ჩაგდების ნებართვა

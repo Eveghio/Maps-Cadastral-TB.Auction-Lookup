@@ -38,13 +38,14 @@
     .nav button.contour { border-color: #e65100; color: #e65100; }
     #contourInfo { padding: 6px 12px; font-size: 12.5px; background: #fff7ed; border-bottom: 1px solid #fed7aa; color: #7c2d12; line-height: 1.45; }
     #contourInfo.problem { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+    body:focus { outline: none; }
     iframe { flex: 1; border: none; width: 100%; background: #525659; }
     #empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; padding: 20px; text-align: center; }
     .help { color: var(--muted); font-size: 11px; margin: 14px 4px 0; line-height: 1.5; }
     kbd { border: 1px solid #ccc; border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; font-size: 10.5px; background: #fafafa; }
   </style>
 </head>
-<body>
+<body tabindex="-1">
   <header>
     <span id="code"></span>
     <div class="tabs">
