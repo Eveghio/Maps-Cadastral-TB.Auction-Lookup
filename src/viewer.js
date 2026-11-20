@@ -502,7 +502,7 @@ async function contourOfShownPlan() {
   } else {
     lines.push("კონტური მზად არის.");
   }
-  lines.push(`სავარაუდო ცდომილება: ჩვეულებრივ ±${formatMeters(result.accuracyMeters.typical)} მ, მაქს. ±${formatMeters(result.accuracyMeters.max)} მ${result.isRaster ? " (საზღვარი სურათიდან არის ამოღებული)" : ""}.`);
+  lines.push(`სავარაუდო ცდომილება: ჩვეულებრივ ±${formatMeters(result.accuracyMeters.typical)}, მაქს. ±${formatMeters(result.accuracyMeters.max)}${result.isRaster ? " (საზღვარი სურათიდან არის ამოღებული)" : ""}.`);
   lines.push(...result.warnings);
   lines.push(...(result.notes || []));
   showContourInfo(planRow, lines, result.areaIsSuspicious || !result.insideGeorgia);

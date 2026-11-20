@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+  <meta charset="utf-8">
+  <title>გეგმების მასობრივი შემოწმება</title>
+  <style>
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; padding: 18px 22px; font-family: sans-serif; font-size: 14px; color: #222; background: #f6f3ee; }
+    h1 { font-size: 17px; margin: 0 0 4px; }
+    .intro { color: #6b6257; font-size: 13px; line-height: 1.5; max-width: 1100px; margin-bottom: 10px; }
+    textarea { width: 100%; max-width: 1100px; height: 110px; padding: 8px 10px; font: 13px monospace; border: 1px solid #d6c7ae; border-radius: 6px; }
+    .options { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; margin: 8px 0; font-size: 13px; max-width: 1100px; }
+    .options select, .options input[type=number] { padding: 4px 6px; border: 1px solid #d6c7ae; border-radius: 5px; }
+    .actions { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; max-width: 1100px; }
+    .actions button { padding: 7px 14px; font-size: 13px; border-radius: 6px; cursor: pointer; border: 1px solid #8d5a00; background: #fff; color: #8d5a00; }
+    .actions button.main { background: #8d5a00; color: #fff; }
+    .actions button:disabled { opacity: 0.45; cursor: default; }
+    #summary { margin: 10px 0; font-size: 13px; max-width: 1100px; }
+    #summary table { width: auto; }
+    #progress { color: #6b6257; font-size: 13px; min-height: 18px; }
+    table { border-collapse: collapse; width: 100%; max-width: 1400px; background: #fff; border: 1px solid #e3d6c3; }
+    th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #efe7da; vertical-align: top; font-size: 12.5px; }
+    th { color: #6b6257; background: #fbf8f3; position: sticky; top: 0; }
+    td.code { font-family: monospace; white-space: nowrap; font-weight: 700; }
+    td.number { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    td.message { color: #555; max-width: 480px; }
+    .good { color: #15803d; } .middle { color: #b45309; } .bad { color: #b91c1c; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>საკადასტრო გეგმების მასობრივი შემოწმება</h1>
+  <div class="intro">
+    ჩასვი საკადასტრო კოდები (ნებისმიერი ტექსტიდან, ერთი ან ათასობით). თითო კოდზე ექსთენშენი ჩამოტვირთავს საკადასტრო გეგმას რეესტრიდან,
+    გადაიყვანს კონტურად და შეადარებს maps.gov.ge-ს ოფიციალურ კონტურს (IoU, უდიდესი გადახრა მეტრებში) და გეგმაში დაწერილ ფართობს.
+    ბოლოს „ZIP Claude-ისთვის“ ერთ ფაილში აგროვებს შედეგს, გეგმების PDF-ებს (პრობლემურებს ყველას, კარგებს — პირველ 300-ს) და ოფიციალურ კონტურებს — ამ ფაილით ხდება გარდაქმნის გაუმჯობესება.
+    ტაბი ღია დატოვე, სანამ შემოწმება მიმდინარეობს.
+  </div>
+  <textarea id="codesInput" placeholder="01.17.01.065.080&#10;01.14.05.006.145&#10;..."></textarea>
+  <div class="options">
+    <label>გეგმები თითო კოდზე:
+      <select id="plansPerCode">
+        <option value="1" selected>მხოლოდ ბოლო</option>
+        <option value="3">ბოლო 3</option>
+        <option value="all">ყველა</option>
+      </select></label>
+    <label>ერთდროულად: <input id="parallel" type="number" min="1" max="6" value="2" style="width:56px"></label>
+    <label><input id="onlyProblemPdfs" type="checkbox"> ZIP-ში PDF მხოლოდ პრობლემურებზე</label>
+  </div>
+  <div class="actions">
+    <button id="start" class="main">შემოწმება</button>
+    <button id="stop" disabled>შეჩერება</button>
+    <button id="downloadZip" disabled title="results.csv + results.json + official.geojson + plans.geojson + გეგმების PDF-ები">ZIP Claude-ისთვის</button>
+    <button id="downloadCsv" disabled>CSV (Excel)</button>
+  </div>
+  <div id="progress"></div>
+  <div id="summary"></div>
+  <table>
+    <thead><tr><th>კოდი</th><th>გეგმა</th><th>შედეგი</th><th>ფართ. PDF</th><th>გამოთვლ.</th><th>სხვაობა %</th><th>ოფიც. ფართ.</th><th>IoU</th><th>მაქს. გადახრა მ</th><th>შეტყობინება</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <script type="module" src="plan_test.js"></script>
+</body>
+</html>

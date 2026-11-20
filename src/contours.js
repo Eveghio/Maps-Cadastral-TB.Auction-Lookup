@@ -329,7 +329,7 @@ function detailsElement(entry) {
         contour.areaIsSuspicious ? "warning" : "");
     }
     if (contour.accuracyMeters) {
-      addLine(`სავარაუდო ცდომილება: ჩვეულებრივ ±${formatMeters(contour.accuracyMeters.typical)} მ, მაქს. ±${formatMeters(contour.accuracyMeters.max)} მ${contour.isRaster ? " (საზღვარი სურათიდან)" : ""}`);
+      addLine(`სავარაუდო ცდომილება: ჩვეულებრივ ±${formatMeters(contour.accuracyMeters.typical)}, მაქს. ±${formatMeters(contour.accuracyMeters.max)}${contour.isRaster ? " (საზღვარი სურათიდან)" : ""}`);
     }
     for (const warning of contour.warnings) addLine(warning, "warning");
     for (const note of contour.notes || []) addLine(note);
@@ -532,6 +532,12 @@ function makeRowDraggable(row, entry, dragHandle) {
 }
 byId("downloadKml").onclick = () => showMessage(`ჩამოიტვირთა ${downloadKmlOf(entries)} KML ფაილი.`);
 byId("downloadGeoJson").onclick = downloadGeoJsonFile;
+// გეგმების მასობრივი შემოწმება ახალ ტაბში; სიის კოდები გადაეცემა ბმულით
+byId("openPlanTest").onclick = () => {
+  const codes = [...new Set(entries.map((entry) => entry.cadastralCode).filter(Boolean))];
+  chrome.tabs.create({ url: chrome.runtime.getURL("plan_test.html") + (codes.length ? "#codes=" + encodeURIComponent(codes.join(",")) : "") });
+};
+
 byId("clearList").onclick = async () => {
   for (const entry of entries) removedEntryIds.add(entry.id);
   entries = [];

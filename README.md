@@ -31,6 +31,7 @@
 python3 tests/make_test_plans.py tests/fixtures        # reportlab; qpdf - დაშიფრული ვარიანტისთვის
 qpdf --allow-weak-crypto --encrypt "" own 128 --use-aes=n -- tests/fixtures/plan_hole.pdf tests/fixtures/plan_hole_rc4.pdf
 node tests/test_extension.js src tests/fixtures tests/out [cadastre_pdf_to_kml.html]
+node tests/test_plan_test.js src <ფიქსტურები: კოდი.pdf, კოდი.wkt, codes.txt> tests/out   # მასობრივი შემოწმების გვერდი
 ```
 
 ბოლო (არასავალდებულო) არგუმენტი: `cadastre_pdf_to_kml.html` (რეპო `Eveghio/cadastre-pdf-to-kml`). მისი შედეგი უნდა ემთხვეოდეს ექსთენშენის კონვერტერს წერტილ-წერტილ.

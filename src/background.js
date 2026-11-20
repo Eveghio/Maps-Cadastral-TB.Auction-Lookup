@@ -808,9 +808,11 @@ async function findContourOnMaps(cadastralCode) {
 }
 
 const isContoursPage = (sender) => !!sender.url && sender.url.startsWith(chrome.runtime.getURL(CONTOURS_PAGE));
+// გეგმების მასობრივი შემოწმება (plan_test.html) ოფიციალურ კონტურს იმავე ძებნით იღებს
+const isPlanTestPage = (sender) => !!sender.url && sender.url.startsWith(chrome.runtime.getURL("plan_test.html"));
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!message || message.type !== "find-contour-on-maps" || !isContoursPage(sender)) return;
+  if (!message || message.type !== "find-contour-on-maps" || !(isContoursPage(sender) || isPlanTestPage(sender))) return;
   findContourOnMaps(String(message.code || "")).then(sendResponse);
   return true;
 });
