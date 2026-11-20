@@ -35,7 +35,7 @@
 | **`plan_contour.js`** | კოდი + გეგმის ნომერი → კონტური (`contourFromPlanNumber`, `listPlans`, `contourFromPlanGroup`) |
 | **`contours_core.js`** | კონტურის ფორმა, GeoJSON, geojson.io-ს ბმული, KML |
 | **`contours.html/js`** | კონტურების სია (ნაწ. 4). 3.18-დან სტრიქონი გადაითრევა მხოლოდ ⠿-ით (ტექსტი ინიშნება), კოდზე დაკლიკება კოდს აკოპირებს |
-| **`plan_test.html/js`**, **`plan_compare.js`** | (3.22) გეგმების მასობრივი შემოწმება: კოდების სია → ბოლო/3/ყველა გეგმა → კონტური → შედარება maps.gov.ge-ს ოფიციალურ კონტურთან (IoU, Hausdorff, ფართობი) → კატეგორიები, CSV, „ZIP Claude-ისთვის“ (results.csv/json, official.geojson, plans.geojson, PDF-ები: პრობლემურები ყველა, კარგები ≤300). იხსნება popup-იდან (რიგი „კონტურები“ → „შემოწმება“, ველის კოდებით; 3.23) ან კონტურების სიიდან (ღილაკი „გეგმების მასობრივი შემოწმება“, სიის კოდები `#codes=`-ით). ZIP-ს ამუშავებს `cadastre-pdf-to-kml/tool/batch_test.mjs --ref`. |
+| **`plan_test.html/js`**, **`plan_compare.js`** | (3.22) გეგმების მასობრივი შემოწმება: კოდების სია → ბოლო/3/ყველა გეგმა → კონტური → შედარება maps.gov.ge-ს ოფიციალურ კონტურთან (IoU, Hausdorff, ფართობი) → კატეგორიები, CSV, „ZIP Claude-ისთვის“ (results.csv/json, official.geojson, plans.geojson, PDF-ები: პრობლემურები ყველა, კარგები ≤300). იხსნება კონტურების სიიდან (ღილაკი „გეგმების მასობრივი შემოწმება“, სიის კოდები `#codes=`-ით). ZIP-ს ამუშავებს `cadastre-pdf-to-kml/tool/batch_test.mjs --ref`. |
 | `lib/pdf.mjs`, `lib/pdf.worker.mjs` | Mozilla pdf.js (გიორგის HTML-იდან ამოღებული) |
 
 `plan_converter.js`-ის ნაწილი B-ს განახლება: როცა გიორგი HTML-ს განაახლებს, ბირთვი (`<script type="module">`-ის დასაწყისიდან `// ---------- UI ----------`-მდე) და `rasterGeometry` ფუნქცია თავიდან გადმოდის უცვლელად.
