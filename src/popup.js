@@ -38,6 +38,12 @@ input.addEventListener("keydown", (e) => {
 document.getElementById("contoursList").addEventListener("click", () => {
   chrome.runtime.sendMessage({ type: "contours-open-list", text: input.value }, () => window.close());
 });
+// გეგმების მასობრივი შემოწმება ახალ ტაბში; ველის კოდები გადაეცემა ბმულით (plan_test.js კითხულობს #codes=)
+document.getElementById("planTest").addEventListener("click", async () => {
+  const codes = input.value.match(/\d+(?:\.\d+){2,9}[ა-ჰ]?/g) || [];
+  await chrome.tabs.create({ url: chrome.runtime.getURL("plan_test.html") + (codes.length ? "#codes=" + encodeURIComponent(codes.join(",")) : "") });
+  window.close();
+});
 document.getElementById("historyLink").addEventListener("click", (e) => {
   e.preventDefault();
   openHistoryPage().then(() => window.close());
