@@ -24,6 +24,7 @@ const CADASTRAL_CODE_PATTERN = /\d+(?:\.\d+){2,9}[ა-ჰ]?/g;
 // კატეგორია -> [აღწერა, ფერი]. რიგი = ჯამის ცხრილის რიგი
 const RESULT_CATEGORIES = {
   matches: ["ემთხვევა ოფიციალურ კონტურს", "good"],
+  pdf_area_differs: ["კონტური ემთხვევა; გეგმაში დაწერილი ფართობი ოდნავ სხვაა", "good"],
   area_ok_no_official: ["ოფიციალური კონტური არ არის; ფართობი ემთხვევა", "good"],
   raster: ["რასტრული გეგმა (დაბალი სიზუსტე)", "middle"],
   old_plan_differs: ["ძველი გეგმა: საზღვარი მას შემდეგ შეიცვალა (მოსალოდნელია)", "middle"],
@@ -106,12 +107,24 @@ async function testOneCode(cadastralCode, plansPerCode) {
   }
 }
 
+// ემთხვევა: IoU ≥ 0.97, ან უდიდესი გადახრა გეგმის ხაზების სიზუსტის ფარგლებშია (≈1.5 pt ქაღალდზე).
+// პატარა ნაკვეთზე IoU მკაცრია: 8 კვ.მ-ზე 0.1 მ გადახრა IoU-ს 0.9-მდე ამცირებს, თუმცა ეს 1:500 გეგმის
+// ჩვეულებრივი სიზუსტეა (447 გეგმის შემოწმება, 2026-11-20: წვეროების ხმაური ~0.35-0.4 pt).
+function matchesOfficial(row, contour) {
+  if (!Number.isFinite(row.iou)) return null;
+  const toleranceMeters = Math.max(0.05, 2.15 * ((contour.accuracyMeters && contour.accuracyMeters.max) || 0)); // max = 0.7 pt
+  row.toleranceMeters = toleranceMeters;
+  return row.iou >= MIN_GOOD_IOU || row.hausdorffMeters <= toleranceMeters;
+}
+
 function categoryOfResult(row, contour, planNumber) {
   if (contour.insideGeorgia === false) return "outside_georgia";
   if (contour.isRaster) return "raster";
-  if (Number.isFinite(row.iou) && row.iou < MIN_GOOD_IOU) return planNumber === 1 ? "differs" : "old_plan_differs";
-  if (contour.areaIsSuspicious) return "area_mismatch";
-  return Number.isFinite(row.iou) ? "matches" : "area_ok_no_official";
+  const matches = matchesOfficial(row, contour);
+  if (matches === false) return planNumber === 1 ? "differs" : "old_plan_differs";
+  // ფართობი არ ემთხვევა, მაგრამ კონტური ოფიციალურს ემთხვევა: გეგმაში დაწერილი ფართობია სხვა (რეესტრის მონაცემი)
+  if (contour.areaIsSuspicious) return matches ? "pdf_area_differs" : "area_mismatch";
+  return matches ? "matches" : "area_ok_no_official";
 }
 
 function planDateText(planGroup) {
@@ -166,7 +179,7 @@ function renderSummary() {
 // ---------- ჩამოტვირთვები ----------
 
 const CSV_COLUMNS = ["cadastralCode", "planNumber", "planDate", "applicationNumber", "category", "areaInPdf", "areaCalculated", "areaDifferencePercent",
-  "officialArea", "officialSource", "iou", "hausdorffMeters", "meanDistanceMeters", "shiftEastMeters", "shiftNorthMeters", "isRaster", "pdfName", "message"];
+  "officialArea", "officialSource", "iou", "hausdorffMeters", "toleranceMeters", "meanDistanceMeters", "shiftEastMeters", "shiftNorthMeters", "isRaster", "pdfName", "message"];
 
 function csvText() {
   const cell = (value) => {
